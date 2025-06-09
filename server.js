@@ -263,6 +263,24 @@ app.get('/api/meus-relatorios', authenticate, async (req, res) => {
   }
 });
 
+// Rota para excluir relatório (protegida)
+app.delete('/api/excluir-relatorio/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Garante que só o dono pode excluir
+    const result = await pool.query(
+      'DELETE FROM relatorios WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Relatório não encontrado ou não pertence a este usuário.' });
+    }
+    res.json({ message: 'Relatório excluído com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir relatório:', error);
+    res.status(500).json({ message: 'Erro ao excluir relatório.' });
+  }
+});
 
 // ========== ROTA DE TESTE ==========
 
