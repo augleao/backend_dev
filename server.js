@@ -5,6 +5,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
+const config = require('./config');
 
 dotenv.config();
 
