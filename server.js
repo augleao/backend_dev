@@ -69,21 +69,45 @@ const uploadAtos = multer({
   },
 });
 
-// Função para extrair atos do texto do PDF das tabelas
+// Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
-  const linhas = texto.split('\n');
   const atos = [];
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l);
+
   for (let linha of linhas) {
-    // Procura linhas que terminam com um valor e um código (4 dígitos)
-    const match = linha.match(/(.+?)\s+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+\s+(\d{4})$/);
+    // 1. Tabela Markdown (começa com | e tem pelo menos 7 pipes)
+    if (linha.startsWith('|') && (linha.match(/\|/g) || []).length >= 7) {
+      const partes = linha.split('|').map(s => s.trim()).filter(Boolean);
+      if (partes.length >= 8 && /^\d/.test(partes[0])) {
+        atos.push({
+          descricao: partes[0],
+          emol_bruto: partes[1],
+          recompe: partes[2],
+          emol_liquido: partes[3],
+          issqn: partes[4],
+          taxa_fiscal: partes[5],
+          valor_final: partes[6],
+          codigo: partes[7],
+          origem,
+        });
+      }
+      continue;
+    }
+
+    // 2. Linha corrida: descrição ... vários valores R$ ... código no final
+    // Exemplo: 5.1 - De assento ... R$134.63 R$ 9.42 R$ 125.21 R$ 0.00 R$ 17.28 R$ 151.91 7501
+    const match = linha.match(/(.+?)\s+R\$[\d.,]+(?:\s+R\$[\d.,]+){5}\s+(\d{4})$/);
     if (match) {
       // Extrai todos os valores monetários da linha
       const valores = [...linha.matchAll(/R\$ ?([\d.,]+)/g)].map(v => v[1].replace('.', '').replace(',', '.'));
-      // O valor final ao usuário é o penúltimo valor monetário
-      const valorFinal = valores.length > 0 ? valores[valores.length - 1] : null;
       atos.push({
         descricao: match[1].trim(),
-        valor_final: valorFinal,
+        emol_bruto: valores[0] || null,
+        recompe: valores[1] || null,
+        emol_liquido: valores[2] || null,
+        issqn: valores[3] || null,
+        taxa_fiscal: valores[4] || null,
+        valor_final: valores[5] || null,
         codigo: match[2],
         origem,
       });
@@ -262,15 +286,13 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     const texto07 = (await pdfParse(buffer07)).text;
     const texto08 = (await pdfParse(buffer08)).text;
 
-    // ADICIONE ESTES LOGS AQUI:
-console.log('=== TEXTO EXTRAÍDO DA TABELA 07 ===');
-console.log(texto07.substring(0, 2000)); // Primeiros 2000 caracteres
-console.log('=== FIM TABELA 07 ===');
-
-console.log('=== TEXTO EXTRAÍDO DA TABELA 08 ===');
-console.log(texto08.substring(0, 2000)); // Primeiros 2000 caracteres
-console.log('=== FIM TABELA 08 ===');
-
+    // Logs para debug
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 07 ===');
+    console.log(texto07.substring(0, 2000));
+    console.log('=== FIM TABELA 07 ===');
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 08 ===');
+    console.log(texto08.substring(0, 2000));
+    console.log('=== FIM TABELA 08 ===');
 
     // Extrai os atos de cada tabela
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
