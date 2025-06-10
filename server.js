@@ -315,6 +315,41 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API funcionando!', timestamp: new Date().toISOString() });
 });
 
+
+
+// Rota de upload e extração dos atos das tabelas 07 e 08
+app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
+  { name: 'tabela07', maxCount: 1 },
+  { name: 'tabela08', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
+      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+    }
+
+    // Lê e extrai texto dos dois arquivos
+    const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
+    const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
+
+    const texto07 = (await pdfParse(buffer07)).text;
+    const texto08 = (await pdfParse(buffer08)).text;
+
+    // Extrai os atos de cada tabela
+    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
+    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
+    const atos = [...atos07, ...atos08];
+
+    // Remove arquivos temporários
+    fs.unlink(req.files.tabela07[0].path, () => {});
+    fs.unlink(req.files.tabela08[0].path, () => {});
+
+    return res.json({ atos });
+  } catch (err) {
+    console.error('Erro ao importar atos:', err);
+    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
+  }
+});
+
 // ========== INICIALIZAÇÃO DO SERVIDOR ==========
 
 app.listen(port, () => {
