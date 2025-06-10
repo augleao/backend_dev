@@ -335,3 +335,33 @@ app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
+
+// ========== EDITAR USUARIOS ==========
+
+app.put('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
+  const { id } = req.params;
+  const { nome, serventia, cargo } = req.body;
+  try {
+    await pool.query(
+      'UPDATE public.users SET nome = $1, serventia = $2, cargo = $3 WHERE id = $4',
+      [nome, serventia, cargo, id]
+    );
+    res.json({ message: 'Usuário atualizado com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao atualizar usuário:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+// ========== EXCLUIR USUARIOS ==========
+
+app.delete('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM public.users WHERE id = $1', [id]);
+    res.json({ message: 'Usuário excluído com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao excluir usuário:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
