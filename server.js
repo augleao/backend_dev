@@ -262,6 +262,15 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     const texto07 = (await pdfParse(buffer07)).text;
     const texto08 = (await pdfParse(buffer08)).text;
 
+    // ADICIONE ESTES LOGS AQUI:
+console.log('=== TEXTO EXTRAÍDO DA TABELA 07 ===');
+console.log(texto07.substring(0, 2000)); // Primeiros 2000 caracteres
+console.log('=== FIM TABELA 07 ===');
+
+console.log('=== TEXTO EXTRAÍDO DA TABELA 08 ===');
+console.log(texto08.substring(0, 2000)); // Primeiros 2000 caracteres
+console.log('=== FIM TABELA 08 ===');
+
 
     // Extrai os atos de cada tabela
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
