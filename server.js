@@ -321,3 +321,17 @@ app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// ========== LISTAR TODOS USUARIOS ==========
+
+app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, nome, email, serventia, cargo FROM public.users ORDER BY nome'
+    );
+    res.json({ usuarios: result.rows });
+  } catch (err) {
+    console.error('Erro ao listar usuários:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
