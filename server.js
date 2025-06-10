@@ -128,6 +128,7 @@ app.post('/api/login', async (req, res) => {
       token, 
       user: { 
         id: user.id,
+        nome: user.nome, // Adiciona "nome"
         email: user.email, 
         serventia: user.serventia, 
         cargo: user.cargo 
@@ -143,7 +144,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/profile', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, serventia, cargo FROM public.users WHERE id = $1', 
+      'SELECT id, nome, email, serventia, cargo FROM public.users WHERE id = $1', 
       [req.user.id]
     );
     
