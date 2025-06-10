@@ -30,7 +30,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function(origin, callback) {
-    // Permite requests sem origin (ex: Postman)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'O CORS não permite acesso deste domínio.';
@@ -59,7 +58,7 @@ const upload = multer({
 
 // Middleware para autenticação
 function authenticate(req, res, next) {
-  const auth = req.headers.authorization; // Bearer <token>
+  const auth = req.headers.authorization;
   if (!auth) return res.sendStatus(401);
   const [, token] = auth.split(' ');
   try {
@@ -68,6 +67,14 @@ function authenticate(req, res, next) {
   } catch {
     res.sendStatus(401);
   }
+}
+
+// Middleware para verificar se o usuário é Registrador (superuser)
+function requireRegistrador(req, res, next) {
+  if (req.user && req.user.cargo === 'Registrador') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Acesso restrito ao Registrador.' });
 }
 
 // ========== ROTAS DE AUTENTICAÇÃO ==========
@@ -83,8 +90,8 @@ app.post('/api/signup', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     await pool.query(
-      'INSERT INTO public.users (nome, email, password, serventia, cargo) VALUES ($1, $2, $3, $4)',
-      [email, hash, serventia, cargo]
+      'INSERT INTO public.users (nome, email, password, serventia, cargo) VALUES ($1, $2, $3, $4, $5)',
+      [nome, email, hash, serventia, cargo]
     );
     return res.status(201).json({ message: 'Cadastro realizado com sucesso!' });
   } catch (err) {
@@ -118,8 +125,9 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
+    // Inclui cargo no token!
     const token = jwt.sign(
-      { id: user.id, email: user.email }, 
+      { id: user.id, email: user.email, cargo: user.cargo }, 
       JWT_SECRET, 
       { expiresIn: '8h' }
     );
@@ -128,7 +136,7 @@ app.post('/api/login', async (req, res) => {
       token, 
       user: { 
         id: user.id,
-        nome: user.nome, // Adiciona "nome"
+        nome: user.nome,
         email: user.email, 
         serventia: user.serventia, 
         cargo: user.cargo 
@@ -282,6 +290,22 @@ app.delete('/api/excluir-relatorio/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Erro ao excluir relatório:', error);
     res.status(500).json({ message: 'Erro ao excluir relatório.' });
+  }
+});
+
+// ========== ROTA EXCLUSIVA PARA REGISTRADOR ==========
+
+app.get('/api/relatorios-todos', authenticate, requireRegistrador, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, email, cargo, serventia, data_geracao, dados_relatorio 
+       FROM relatorios 
+       ORDER BY data_geracao DESC`
+    );
+    res.json({ relatorios: result.rows });
+  } catch (err) {
+    console.error('Erro ao buscar todos os relatórios:', err);
+    return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
 
