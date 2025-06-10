@@ -43,7 +43,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Configuração do multer para upload de arquivos
+// Configuração do multer para upload de arquivos (single)
 const upload = multer({
   dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -55,6 +55,42 @@ const upload = multer({
     }
   },
 });
+
+// Configuração do multer para upload de múltiplos arquivos (tabelas 07 e 08)
+const uploadAtos = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos PDF são permitidos!'));
+    }
+  },
+});
+
+// Função para extrair atos do texto do PDF das tabelas
+function extrairAtosDoTexto(texto, origem) {
+  const linhas = texto.split('\n');
+  const atos = [];
+  for (let linha of linhas) {
+    // Procura linhas que terminam com um valor e um código (4 dígitos)
+    const match = linha.match(/(.+?)\s+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+R\$[\s\d.,]+\s+(\d{4})$/);
+    if (match) {
+      // Extrai todos os valores monetários da linha
+      const valores = [...linha.matchAll(/R\$ ?([\d.,]+)/g)].map(v => v[1].replace('.', '').replace(',', '.'));
+      // O valor final ao usuário é o penúltimo valor monetário
+      const valorFinal = valores.length > 0 ? valores[valores.length - 1] : null;
+      atos.push({
+        descricao: match[1].trim(),
+        valor_final: valorFinal,
+        codigo: match[2],
+        origem,
+      });
+    }
+  }
+  return atos;
+}
 
 // Middleware para autenticação
 function authenticate(req, res, next) {
@@ -169,7 +205,7 @@ app.get('/api/profile', authenticate, async (req, res) => {
 
 // ========== ROTAS DE UPLOAD (PROTEGIDAS) ==========
 
-// Upload de PDF (agora protegido por autenticação)
+// Upload de PDF (single, protegido por autenticação)
 app.post('/api/upload', authenticate, (req, res) => {
   const uploadMiddleware = upload.single('file');
 
@@ -184,9 +220,6 @@ app.post('/api/upload', authenticate, (req, res) => {
     }
 
     try {
-      console.log('Arquivo recebido:', req.file);
-      console.log('Usuário:', req.user.email);
-
       const dataBuffer = fs.readFileSync(req.file.path);
       const pdfData = await pdfParse(dataBuffer);
 
@@ -195,7 +228,6 @@ app.post('/api/upload', authenticate, (req, res) => {
       // Remove o arquivo temporário
       fs.unlink(req.file.path, (unlinkErr) => {
         if (unlinkErr) console.error('Erro ao deletar arquivo temporário:', unlinkErr);
-        else console.log('Arquivo temporário deletado:', req.file.path);
       });
 
       return res.json({
@@ -213,10 +245,41 @@ app.post('/api/upload', authenticate, (req, res) => {
   });
 });
 
+// Rota de upload e extração dos atos das tabelas 07 e 08
+app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
+  { name: 'tabela07', maxCount: 1 },
+  { name: 'tabela08', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
+      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+    }
+
+    // Lê e extrai texto dos dois arquivos
+    const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
+    const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
+
+    const texto07 = (await pdfParse(buffer07)).text;
+    const texto08 = (await pdfParse(buffer08)).text;
+
+    // Extrai os atos de cada tabela
+    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
+    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
+    const atos = [...atos07, ...atos08];
+
+    // Remove arquivos temporários
+    fs.unlink(req.files.tabela07[0].path, () => {});
+    fs.unlink(req.files.tabela08[0].path, () => {});
+
+    return res.json({ atos });
+  } catch (err) {
+    console.error('Erro ao importar atos:', err);
+    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
+  }
+});
+
 // Rota para salvar relatório (protegida)
 app.post('/api/salvar-relatorio', authenticate, async (req, res) => {
-  console.log('Recebido POST /api/salvar-relatorio');
-  console.log('Body:', req.body);
   const { dadosRelatorio } = req.body;
   
   if (!dadosRelatorio) {
@@ -315,48 +378,6 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API funcionando!', timestamp: new Date().toISOString() });
 });
 
-
-
-// Rota de upload e extração dos atos das tabelas 07 e 08
-app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
-  { name: 'tabela07', maxCount: 1 },
-  { name: 'tabela08', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
-      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
-    }
-
-    // Lê e extrai texto dos dois arquivos
-    const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
-    const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
-
-    const texto07 = (await pdfParse(buffer07)).text;
-    const texto08 = (await pdfParse(buffer08)).text;
-
-    // Extrai os atos de cada tabela
-    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
-    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
-    const atos = [...atos07, ...atos08];
-
-    // Remove arquivos temporários
-    fs.unlink(req.files.tabela07[0].path, () => {});
-    fs.unlink(req.files.tabela08[0].path, () => {});
-
-    return res.json({ atos });
-  } catch (err) {
-    console.error('Erro ao importar atos:', err);
-    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
-  }
-});
-
-// ========== INICIALIZAÇÃO DO SERVIDOR ==========
-
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
-  console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
-});
-
 // ========== LISTAR TODOS USUARIOS ==========
 
 app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res) => {
@@ -399,4 +420,11 @@ app.delete('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (r
     console.error('Erro ao excluir usuário:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
+});
+
+// ========== INICIALIZAÇÃO DO SERVIDOR ==========
+
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
+  console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
