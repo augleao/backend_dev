@@ -74,16 +74,16 @@ function authenticate(req, res, next) {
 
 // Cadastro de usuário
 app.post('/api/signup', async (req, res) => {
-  const { email, password, serventia, cargo } = req.body;
+  const { nome, email, password, serventia, cargo } = req.body;
   
-  if (!email || !password || !serventia || !cargo) {
+  if (!nome ||!email || !password || !serventia || !cargo) {
     return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
   }
 
   try {
     const hash = await bcrypt.hash(password, 10);
     await pool.query(
-      'INSERT INTO public.users (email, password, serventia, cargo) VALUES ($1, $2, $3, $4)',
+      'INSERT INTO public.users (nome, email, password, serventia, cargo) VALUES ($1, $2, $3, $4)',
       [email, hash, serventia, cargo]
     );
     return res.status(201).json({ message: 'Cadastro realizado com sucesso!' });
