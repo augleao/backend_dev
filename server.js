@@ -261,6 +261,8 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
 
     const texto07 = (await pdfParse(buffer07)).text;
     const texto08 = (await pdfParse(buffer08)).text;
+    console.log('Atos extraídos da Tabela 07:', atos07);
+    console.log('Atos extraídos da Tabela 08:', atos08);
 
     // Extrai os atos de cada tabela
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
