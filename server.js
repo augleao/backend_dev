@@ -7,6 +7,7 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const fetch = require('node-fetch'); // Adicione no topo do arquivo
 
 dotenv.config();
 
@@ -270,19 +271,21 @@ app.post('/api/upload', authenticate, (req, res) => {
 });
 
 // Rota de upload e extração dos atos das tabelas 07 e 08
-app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
-  { name: 'tabela07', maxCount: 1 },
-  { name: 'tabela08', maxCount: 1 }
-]), async (req, res) => {
+app.post('/api/importar-atos', authenticate, requireRegistrador, async (req, res) => {
   try {
-    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
-      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+    const { urlTabela07, urlTabela08 } = req.body;
+    if (!urlTabela07 || !urlTabela08) {
+      return res.status(400).json({ message: 'Envie as duas URLs das tabelas.' });
     }
 
-    // Lê e extrai texto dos dois arquivos
-    const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
-    const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
+    // Baixa os PDFs das URLs
+    const response07 = await fetch(urlTabela07);
+    const buffer07 = await response07.buffer();
 
+    const response08 = await fetch(urlTabela08);
+    const buffer08 = await response08.buffer();
+
+    // Extrai texto dos PDFs
     const texto07 = (await pdfParse(buffer07)).text;
     const texto08 = (await pdfParse(buffer08)).text;
 
@@ -301,14 +304,10 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     console.log('Atos extraídos da Tabela 08:', atos08);
     const atos = [...atos07, ...atos08];
 
-    // Remove arquivos temporários
-    fs.unlink(req.files.tabela07[0].path, () => {});
-    fs.unlink(req.files.tabela08[0].path, () => {});
-
     return res.json({ atos });
   } catch (err) {
     console.error('Erro ao importar atos:', err);
-    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
+    return res.status(500).json({ message: 'Erro ao processar as URLs.' });
   }
 });
 
