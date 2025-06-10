@@ -206,6 +206,8 @@ app.post('/api/upload', authenticate, (req, res) => {
 
 // Rota para salvar relatório (protegida)
 app.post('/api/salvar-relatorio', authenticate, async (req, res) => {
+  console.log('Recebido POST /api/salvar-relatorio');
+  console.log('Body:', req.body);
   const { dadosRelatorio } = req.body;
   
   if (!dadosRelatorio) {
