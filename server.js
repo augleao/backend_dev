@@ -8,7 +8,6 @@ const pdfParse = require('pdf-parse');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-
 dotenv.config();
 
 const app = express();
@@ -278,34 +277,54 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
 ]), async (req, res) => {
   try {
     if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
+      console.log('Arquivos PDF não enviados corretamente.');
       return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
     }
 
-    // Lê e extrai texto dos dois arquivos
+    console.log('Arquivos recebidos:');
+    console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
+    console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
+
+    // Lê os buffers
     const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
     const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
 
-    const texto07 = (await pdfParse(buffer07)).text;
-    const texto08 = (await pdfParse(buffer08)).text;
+    console.log('Tamanho do buffer Tabela 07:', buffer07.length);
+    console.log('Tamanho do buffer Tabela 08:', buffer08.length);
 
-    // Logs para debug
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 07 ===');
+    // Extrai texto
+    const pdfData07 = await pdfParse(buffer07);
+    const pdfData08 = await pdfParse(buffer08);
+
+    const texto07 = pdfData07.text;
+    const texto08 = pdfData08.text;
+
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 07 (primeiros 2000 chars) ===');
     console.log(texto07.substring(0, 2000));
     console.log('=== FIM TABELA 07 ===');
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 08 ===');
+
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 08 (primeiros 2000 chars) ===');
     console.log(texto08.substring(0, 2000));
     console.log('=== FIM TABELA 08 ===');
 
-    // Extrai os atos de cada tabela
+    // Extrai atos
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
     const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
-    console.log('Atos extraídos da Tabela 07:', atos07);
-    console.log('Atos extraídos da Tabela 08:', atos08);
+
+    console.log('Atos extraídos da Tabela 07:', atos07.length);
+    console.log('Atos extraídos da Tabela 08:', atos08.length);
+
     const atos = [...atos07, ...atos08];
 
     // Remove arquivos temporários
-    fs.unlink(req.files.tabela07[0].path, () => {});
-    fs.unlink(req.files.tabela08[0].path, () => {});
+    fs.unlink(req.files.tabela07[0].path, (err) => {
+      if (err) console.error('Erro ao deletar arquivo Tabela 07:', err);
+      else console.log('Arquivo Tabela 07 deletado.');
+    });
+    fs.unlink(req.files.tabela08[0].path, (err) => {
+      if (err) console.error('Erro ao deletar arquivo Tabela 08:', err);
+      else console.log('Arquivo Tabela 08 deletado.');
+    });
 
     return res.json({ atos });
   } catch (err) {
