@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
-const pdfjsLib = require('pdfjs-dist/es5/build/pdf.js');
+const pdfjsLib = require('pdfjs-dist');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
