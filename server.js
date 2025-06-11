@@ -300,11 +300,11 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     const texto07 = await extractTextWithPdfjs(req.files.tabela07[0].path);
     const texto08 = await extractTextWithPdfjs(req.files.tabela08[0].path);
 
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 07 (primeiros 2000 chars) ===');
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
     console.log('Texto completo Tabela 07:', texto07);
     console.log('=== FIM TABELA 07 ===');
 
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 08 (primeiros 2000 chars) ===');
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 08  ===');
     console.log('Texto completo Tabela 07:', texto08);
     console.log('=== FIM TABELA 08 ===');
 
