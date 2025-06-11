@@ -72,6 +72,7 @@ const uploadAtos = multer({
 // Função para extrair texto usando pdfjs-dist
 async function extractTextWithPdfjs(filePath) {
   const data = new Uint8Array(fs.readFileSync(filePath));
+  console.log('Tamanho do buffer recebido:', data.length); // <--- Adicione esta linha
   const pdf = await pdfjsLib.getDocument({ data }).promise;
   let fullText = '';
 
@@ -298,7 +299,9 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
 
     const texto07 = await extractTextWithPdfjs(req.files.tabela07[0].path);
+    console.log('Tamanho do buffer Tabela 07:', buffer07.length); // <--- Adicione esta linha
     const texto08 = await extractTextWithPdfjs(req.files.tabela08[0].path);
+    console.log('Tamanho do buffer Tabela 08:', buffer08.length); // <--- Adicione esta linha
 
     console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
     console.log('Texto completo Tabela 07:', texto07);
