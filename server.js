@@ -301,11 +301,11 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     const texto08 = await extractTextWithPdfjs(req.files.tabela08[0].path);
 
     console.log('=== TEXTO EXTRAÍDO DA TABELA 07 (primeiros 2000 chars) ===');
-    console.log(texto07.substring(0, 2000));
+    console.log('Texto completo Tabela 07:', texto07);
     console.log('=== FIM TABELA 07 ===');
 
     console.log('=== TEXTO EXTRAÍDO DA TABELA 08 (primeiros 2000 chars) ===');
-    console.log(texto08.substring(0, 2000));
+    console.log('Texto completo Tabela 07:', texto08);
     console.log('=== FIM TABELA 08 ===');
 
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
