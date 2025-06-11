@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
-const pdfParse = require('pdf-parse');
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -68,6 +68,21 @@ const uploadAtos = multer({
     }
   },
 });
+
+// Função para extrair texto usando pdfjs-dist
+async function extractTextWithPdfjs(filePath) {
+  const data = new Uint8Array(fs.readFileSync(filePath));
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  let fullText = '';
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const strings = content.items.map(item => item.str);
+    fullText += strings.join(' ') + '\n';
+  }
+  return fullText;
+}
 
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
@@ -244,10 +259,7 @@ app.post('/api/upload', authenticate, (req, res) => {
     }
 
     try {
-      const dataBuffer = fs.readFileSync(req.file.path);
-      const pdfData = await pdfParse(dataBuffer);
-
-      const textoExtraido = pdfData.text;
+      const textoExtraido = await extractTextWithPdfjs(req.file.path);
 
       // Remove o arquivo temporário
       fs.unlink(req.file.path, (unlinkErr) => {
@@ -285,19 +297,8 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
     console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
 
-    // Lê os buffers
-    const buffer07 = fs.readFileSync(req.files.tabela07[0].path);
-    const buffer08 = fs.readFileSync(req.files.tabela08[0].path);
-
-    console.log('Tamanho do buffer Tabela 07:', buffer07.length);
-    console.log('Tamanho do buffer Tabela 08:', buffer08.length);
-
-    // Extrai texto
-    const pdfData07 = await pdfParse(buffer07);
-    const pdfData08 = await pdfParse(buffer08);
-
-    const texto07 = pdfData07.text;
-    const texto08 = pdfData08.text;
+    const texto07 = await extractTextWithPdfjs(req.files.tabela07[0].path);
+    const texto08 = await extractTextWithPdfjs(req.files.tabela08[0].path);
 
     console.log('=== TEXTO EXTRAÍDO DA TABELA 07 (primeiros 2000 chars) ===');
     console.log(texto07.substring(0, 2000));
@@ -307,7 +308,6 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     console.log(texto08.substring(0, 2000));
     console.log('=== FIM TABELA 08 ===');
 
-    // Extrai atos
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
     const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
 
