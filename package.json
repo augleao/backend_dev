@@ -13,7 +13,9 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
     "pdf-parse": "^1.1.1",
+    "pdf-poppler": "^0.2.1",
     "pdfjs-dist": "^3.11.174",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "tesseract.js": "^6.0.1"
   }
 }
