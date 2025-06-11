@@ -7,6 +7,7 @@ const fs = require('fs');
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const pdfParse = require('pdf-parse');
 
 dotenv.config();
 
@@ -69,21 +70,14 @@ const uploadAtos = multer({
   },
 });
 
-// Função para extrair texto usando pdfjs-dist
-async function extractTextWithPdfjs(filePath) {
-  const data = new Uint8Array(fs.readFileSync(filePath));
+async function extractTextWithPdfParse(filePath) {
+  const dataBuffer = fs.readFileSync(filePath);
   console.log('Tamanho do buffer recebido:', data.length);
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
-  let fullText = '';
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map(item => item.str);
-    fullText += strings.join(' ') + '\n';
-  }
-  return fullText;
+  const data = await pdfParse(dataBuffer);
+  return data.text;
 }
+
+
 
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
@@ -260,7 +254,7 @@ app.post('/api/upload', authenticate, (req, res) => {
     }
 
     try {
-      const textoExtraido = await extractTextWithPdfjs(req.file.path);
+      const texto07 = await extractTextWithPdfParse(req.files.tabela07[0].path);
 
       // Remove o arquivo temporário
       fs.unlink(req.file.path, (unlinkErr) => {
@@ -298,8 +292,8 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
     console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
 
-    const texto07 = await extractTextWithPdfjs(req.files.tabela07[0].path);
-    const texto08 = await extractTextWithPdfjs(req.files.tabela08[0].path);
+    const texto07 = await extractTextWithPdfParse(req.files.tabela07[0].path);
+    const texto08 = await extractTextWithPdfParse(req.files.tabela08[0].path);
 
     console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
     console.log('Texto completo Tabela 07:', texto07);
