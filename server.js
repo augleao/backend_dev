@@ -7,6 +7,9 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
+const path = require('path');
+const Tesseract = require('tesseract.js');
+const { PdfConverter } = require('pdf-poppler');
 
 dotenv.config();
 
@@ -74,6 +77,53 @@ async function extractTextWithPdfParse(filePath) {
   console.log('Tamanho do buffer recebido:', dataBuffer.length);
   const data = await pdfParse(dataBuffer);
   return data.text;
+}
+
+//função para converter PDF em imagens e extrair texto via OCR
+
+async function pdfToTextWithOCR(pdfPath) {
+  const outputDir = path.join(__dirname, 'temp_images');
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
+  }
+
+  const opts = {
+    format: 'png',
+    out_dir: outputDir,
+    out_prefix: 'page',
+    page: null // converte todas as páginas
+  };
+
+  try {
+    await PdfConverter.convert(pdfPath, opts);
+
+    const files = fs.readdirSync(outputDir).filter(f => f.endsWith('.png'));
+
+    let fullText = '';
+
+    for (const file of files) {
+      const imagePath = path.join(outputDir, file);
+      console.log(`Fazendo OCR na imagem: ${imagePath}`);
+
+      const { data: { text } } = await Tesseract.recognize(imagePath, 'por', {
+        logger: m => console.log(m)
+      });
+
+      fullText += text + '\n';
+
+      fs.unlinkSync(imagePath);
+    }
+
+    if (fs.readdirSync(outputDir).length === 0) {
+      fs.rmdirSync(outputDir);
+    }
+
+    return fullText;
+
+  } catch (err) {
+    console.error('Erro na conversão OCR:', err);
+    throw err;
+  }
 }
 
 // Função robusta para extrair atos do texto do PDF das tabelas
@@ -274,54 +324,39 @@ app.post('/api/upload', authenticate, (req, res) => {
 });
 
 // Rota de upload e extração dos atos das tabelas 07 e 08
-app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
-  { name: 'tabela07', maxCount: 1 },
-  { name: 'tabela08', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
-      console.log('Arquivos PDF não enviados corretamente.');
-      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+app.post('/api/upload', authenticate, (req, res) => {
+  const uploadMiddleware = upload.single('file');
+
+  uploadMiddleware(req, res, async (err) => {
+    if (err) {
+      console.error('Erro no upload:', err);
+      return res.status(400).json({ error: err.message });
     }
 
-    console.log('Arquivos recebidos:');
-    console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
-    console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
+    if (!req.file) {
+      return res.status(400).json({ error: 'Arquivo não enviado' });
+    }
 
-    const texto07 = await extractTextWithPdfParse(req.files.tabela07[0].path);
-    const texto08 = await extractTextWithPdfParse(req.files.tabela08[0].path);
+    try {
+      const textoExtraido = await pdfToTextWithOCR(req.file.path);
 
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
-    console.log('Texto completo Tabela 07:', texto07);
-    console.log('=== FIM TABELA 07 ===');
+      fs.unlink(req.file.path, (unlinkErr) => {
+        if (unlinkErr) console.error('Erro ao deletar arquivo temporário:', unlinkErr);
+      });
 
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 08  ===');
-    console.log('Texto completo Tabela 08:', texto08);
-    console.log('=== FIM TABELA 08 ===');
+      return res.json({
+        message: 'Upload e extração OCR do PDF concluídos',
+        texto: textoExtraido,
+      });
 
-    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
-    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
-
-    console.log('Atos extraídos da Tabela 07:', atos07.length);
-    console.log('Atos extraídos da Tabela 08:', atos08.length);
-
-    const atos = [...atos07, ...atos08];
-
-    // Remove arquivos temporários
-    fs.unlink(req.files.tabela07[0].path, (err) => {
-      if (err) console.error('Erro ao deletar arquivo Tabela 07:', err);
-      else console.log('Arquivo Tabela 07 deletado.');
-    });
-    fs.unlink(req.files.tabela08[0].path, (err) => {
-      if (err) console.error('Erro ao deletar arquivo Tabela 08:', err);
-      else console.log('Arquivo Tabela 08 deletado.');
-    });
-
-    return res.json({ atos });
-  } catch (err) {
-    console.error('Erro ao importar atos:', err);
-    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
-  }
+    } catch (processErr) {
+      console.error('Erro ao processar o arquivo:', processErr);
+      return res.status(500).json({ 
+        error: 'Erro ao processar o upload do PDF', 
+        details: processErr.message 
+      });
+    }
+  });
 });
 
 // Rota para salvar relatório (protegida)
@@ -415,6 +450,59 @@ app.get('/api/relatorios-todos', authenticate, requireRegistrador, async (req, r
   } catch (err) {
     console.error('Erro ao buscar todos os relatórios:', err);
     return res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+//rota para para usar OCR
+
+app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
+  { name: 'tabela07', maxCount: 1 },
+  { name: 'tabela08', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
+      console.log('Arquivos PDF não enviados corretamente.');
+      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+    }
+
+    console.log('Arquivos recebidos:');
+    console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
+    console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
+
+    // Aqui usamos a função OCR para extrair texto
+    const texto07 = await pdfToTextWithOCR(req.files.tabela07[0].path);
+    const texto08 = await pdfToTextWithOCR(req.files.tabela08[0].path);
+
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
+    console.log('Texto completo Tabela 07:', texto07);
+    console.log('=== FIM TABELA 07 ===');
+
+    console.log('=== TEXTO EXTRAÍDO DA TABELA 08  ===');
+    console.log('Texto completo Tabela 08:', texto08);
+    console.log('=== FIM TABELA 08 ===');
+
+    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
+    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
+
+    console.log('Atos extraídos da Tabela 07:', atos07.length);
+    console.log('Atos extraídos da Tabela 08:', atos08.length);
+
+    const atos = [...atos07, ...atos08];
+
+    // Remove arquivos temporários
+    fs.unlink(req.files.tabela07[0].path, (err) => {
+      if (err) console.error('Erro ao deletar arquivo Tabela 07:', err);
+      else console.log('Arquivo Tabela 07 deletado.');
+    });
+    fs.unlink(req.files.tabela08[0].path, (err) => {
+      if (err) console.error('Erro ao deletar arquivo Tabela 08:', err);
+      else console.log('Arquivo Tabela 08 deletado.');
+    });
+
+    return res.json({ atos });
+  } catch (err) {
+    console.error('Erro ao importar atos:', err);
+    return res.status(500).json({ message: 'Erro ao processar os arquivos.' });
   }
 });
 
