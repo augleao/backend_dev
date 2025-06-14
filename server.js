@@ -137,66 +137,12 @@ function extrairAtosDoTexto(texto, origem) {
 }
 
 function processarAto(textoAto, origem) {
-  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
-
-  const regex = /(.*)\sR?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*(\d+)$/;
-
-  const match = textoAto.match(regex);
-  if (!match) {
-    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
-    return null;
-  }
-
-  const descricao = match[1].trim();
-  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
-
-  return {
-    descricao,
-    emol_bruto: parseValor(match[2]),
-    recompe: parseValor(match[3]),
-    emol_liquido: parseValor(match[4]),
-    issqn: parseValor(match[5]),
-    taxa_fiscal: parseValor(match[6]),
-    valor_final: parseValor(match[7]),
-    codigo: match[8],
-    origem,
-  };
-}
-
-function processarAto(textoAto, origem) {
-  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
-
-  // Regex para capturar valores e código no final, mais flexível para espaços e formatos
-  const regex = /(.*)\sR?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*(\d+)$/;
-
-  const match = textoAto.match(regex);
-  if (!match) {
-    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
-    return null;
-  }
-
-  const descricao = match[1].trim();
-  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
-
-  return {
-    descricao,
-    emol_bruto: parseValor(match[2]),
-    recompe: parseValor(match[3]),
-    emol_liquido: parseValor(match[4]),
-    issqn: parseValor(match[5]),
-    taxa_fiscal: parseValor(match[6]),
-    valor_final: parseValor(match[7]),
-    codigo: match[8],
-    origem,
-  };
-}
-function processarAto(textoAto, origem) {
   // Remove pipes e múltiplos espaços
   textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // Regex para capturar os valores monetários e código no final
-  // Exemplo: "Descrição ... R$299.48 R$20.96 R$278.52 R$0.00 R$45.08 R$344.56 7101"
-  const regex = /(.*)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\s(\d+)$/;
+  // Regex mais flexível para capturar valores e código no final
+  // Captura a descrição até o primeiro valor monetário, depois captura 6 valores monetários e o código no final
+  const regex = /^(.*?)(?:R?\$?\s*[\d.,]+\s+){6}(\d+)$/;
 
   const match = textoAto.match(regex);
   if (!match) {
@@ -205,17 +151,31 @@ function processarAto(textoAto, origem) {
   }
 
   const descricao = match[1].trim();
+
+  // Extrair os valores monetários e código usando outra regex para pegar todos os números no final
+  const valoresRegex = /R?\$?\s*([\d.,]+)/g;
+  const valores = [];
+  let m;
+  while ((m = valoresRegex.exec(textoAto)) !== null) {
+    valores.push(m[1]);
+  }
+
+  if (valores.length < 6) {
+    console.warn('Valores insuficientes para ato:', textoAto.substring(0, 100));
+    return null;
+  }
+
   const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
 
   return {
     descricao,
-    emol_bruto: parseValor(match[2]),
-    recompe: parseValor(match[3]),
-    emol_liquido: parseValor(match[4]),
-    issqn: parseValor(match[5]),
-    taxa_fiscal: parseValor(match[6]),
-    valor_final: parseValor(match[7]),
-    codigo: match[8],
+    emol_bruto: parseValor(valores[0]),
+    recompe: parseValor(valores[1]),
+    emol_liquido: parseValor(valores[2]),
+    issqn: parseValor(valores[3]),
+    taxa_fiscal: parseValor(valores[4]),
+    valor_final: parseValor(valores[5]),
+    codigo: match[2],
     origem,
   };
 }
