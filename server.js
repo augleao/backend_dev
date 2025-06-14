@@ -82,6 +82,8 @@ async function extractTextWithPdfParse(filePath) {
 
 
 // Função robusta para extrair atos do texto das tabelas
+
+
 const codigosTabela07 = new Set([
   '7101', '7201', '7302', '7402', '7501', '7502', '7701', '7802', '7803', '7804',
   '7901', '7100', '7110', '7120', '7130', '7140', '7150', '7180', '7190', '7927'
@@ -89,7 +91,17 @@ const codigosTabela07 = new Set([
 
 const codigosTabela08 = new Set(['8101', '8301', '8310']);
 
-function extrairAtosDoTexto(texto, origem) {
+function extrairAtos(texto, origem) {
+  if (origem === 'Tabela 07') {
+    return extrairAtosTabela07(texto);
+  } else if (origem === 'Tabela 08') {
+    return extrairAtosTabela08(texto);
+  } else {
+    return [];
+  }
+}
+
+function extrairAtosTabela07(texto) {
   const atos = [];
   const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
@@ -109,7 +121,7 @@ function extrairAtosDoTexto(texto, origem) {
 
     if (isLinhaInicioAto(linha)) {
       if (buffer) {
-        const ato = processarAto(buffer, origem);
+        const ato = processarAtoTabela07(buffer);
         if (ato) atos.push(ato);
       }
       buffer = linha;
@@ -119,21 +131,98 @@ function extrairAtosDoTexto(texto, origem) {
   }
 
   if (buffer) {
-    const ato = processarAto(buffer, origem);
+    const ato = processarAtoTabela07(buffer);
     if (ato) atos.push(ato);
   }
 
-  // Filtrar atos pelos códigos conforme a tabela
-  const codigosValidos = origem === 'Tabela 07' ? codigosTabela07 : codigosTabela08;
+  return atos.filter(ato => codigosTabela07.has(ato.codigo));
+}
 
-  return atos
-    .filter(ato => codigosValidos.has(ato.codigo))
-    .map(ato => ({
-      descricao: ato.descricao,
-      valor_final: ato.valor_final,
-      codigo: ato.codigo,
-      origem: ato.origem
-    }));
+function processarAtoTabela07(textoAto) {
+  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Regex para capturar valores e código no final, mais flexível para espaços e formatos
+  const regex = /^(.*?)(?:R?\$?\s*[\d.,]+\s+){6}(\d+)$/;
+
+  const match = textoAto.match(regex);
+  if (!match) {
+    console.warn('Não conseguiu extrair ato Tabela 07:', textoAto.substring(0, 100));
+    return null;
+  }
+
+  const descricao = match[1].trim();
+
+  const valoresRegex = /R?\$?\s*([\d.,]+)/g;
+  const valores = [];
+  let m;
+  while ((m = valoresRegex.exec(textoAto)) !== null) {
+    valores.push(m[1]);
+  }
+
+  if (valores.length < 6) {
+    console.warn('Valores insuficientes para ato Tabela 07:', textoAto.substring(0, 100));
+    return null;
+  }
+
+  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+
+  return {
+    descricao,
+    emol_bruto: parseValor(valores[0]),
+    recompe: parseValor(valores[1]),
+    emol_liquido: parseValor(valores[2]),
+    issqn: parseValor(valores[3]),
+    taxa_fiscal: parseValor(valores[4]),
+    valor_final: parseValor(valores[5]),
+    codigo: match[2],
+    origem: 'Tabela 07',
+  };
+}
+
+function extrairAtosTabela08(texto) {
+  const atos = [];
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  const linhasIgnorar = ['VETADO', 'Nota', 'Notas', 'Tabela', '---'];
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i];
+
+    if (linhasIgnorar.some(palavra => linha.includes(palavra))) {
+      continue;
+    }
+
+    if (!linha.includes('|')) {
+      continue;
+    }
+
+    const partes = linha.split('|').map(s => s.trim()).filter(s => s.length > 0);
+
+    if (partes.length < 8) {
+      continue;
+    }
+
+    const codigo = partes[7];
+    if (!codigosTabela08.has(codigo)) {
+      continue;
+    }
+
+    const parseValor = v => parseFloat(v.replace(/[R$\s]/g, '').replace(',', '.')) || 0;
+
+    atos.push({
+      descricao: partes[0],
+      emol_bruto: parseValor(partes[1]),
+      recompe: parseValor(partes[2]),
+      emol_liquido: parseValor(partes[3]),
+      issqn: parseValor(partes[4]),
+      taxa_fiscal: parseValor(partes[5]),
+      valor_final: parseValor(partes[6]),
+      codigo,
+      origem: 'Tabela 08',
+    });
+  }
+
+  return atos;
 }
 
 function processarAto(textoAto, origem) {
