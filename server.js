@@ -87,7 +87,7 @@ function extrairAtosDoTexto(texto, origem) {
   const linhas = texto.split('\n').map(l => l.trim()).filter(l => l);
 
   for (let linha of linhas) {
-    const partes = linha.split(';').map(s => s.trim()); // Use o delimitador correto
+    const partes = linha.split('|').map(s => s.trim()); // Use o delimitador correto
     if (partes.length >= 8) {
       atos.push({
         descricao: partes[0],
