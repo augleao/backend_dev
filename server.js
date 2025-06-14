@@ -78,52 +78,8 @@ async function extractTextWithPdfParse(filePath) {
   return data.text;
 }
 
-//função para converter PDF em imagens e extrair texto via OCR
 
-async function pdfToTextWithOCR(pdfPath) {
-  const outputDir = path.join(__dirname, 'temp_images');
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir);
-  }
 
-  const opts = {
-    format: 'png',
-    out_dir: outputDir,
-    out_prefix: 'page',
-    page: null // converte todas as páginas
-  };
-
-  try {
-    await PdfConverter.convert(pdfPath, opts);
-
-    const files = fs.readdirSync(outputDir).filter(f => f.endsWith('.png'));
-
-    let fullText = '';
-
-    for (const file of files) {
-      const imagePath = path.join(outputDir, file);
-      console.log(`Fazendo OCR na imagem: ${imagePath}`);
-
-      const { data: { text } } = await Tesseract.recognize(imagePath, 'por', {
-        logger: m => console.log(m)
-      });
-
-      fullText += text + '\n';
-
-      fs.unlinkSync(imagePath);
-    }
-
-    if (fs.readdirSync(outputDir).length === 0) {
-      fs.rmdirSync(outputDir);
-    }
-
-    return fullText;
-
-  } catch (err) {
-    console.error('Erro na conversão OCR:', err);
-    throw err;
-  }
-}
 
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
