@@ -84,27 +84,34 @@ async function extractTextWithPdfParse(filePath) {
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
   const atos = [];
-  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('| ---') && !l.startsWith('Tabela'));
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   let buffer = '';
-  const isInicioAto = (linha) => /^\d+(\.\d+)?\s*-\s*/.test(linha); // Ex: "1 -", "5.1 -"
+  const isLinhaInicioAto = (linha) => /^\d+(\.\d+)?\s*-\s*/.test(linha);
+
+  const linhasIgnorar = [
+    'Tabela', 'Certidões', 'Revogado', 'VETADO', '---', 'Obs.', 'Nota', 'Item vetado', 'Expedição', 'Apostilamento'
+  ];
 
   for (let i = 0; i < linhas.length; i++) {
     const linha = linhas[i];
 
-    if (isInicioAto(linha)) {
-      // Se já tem algo no buffer, processa antes de começar novo ato
+    // Ignorar linhas que contenham palavras-chave
+    if (linhasIgnorar.some(palavra => linha.includes(palavra))) {
+      continue;
+    }
+
+    if (isLinhaInicioAto(linha)) {
       if (buffer) {
         const ato = processarAto(buffer, origem);
         if (ato) atos.push(ato);
       }
       buffer = linha;
     } else {
-      // Continua juntando linhas ao buffer
       buffer += ' ' + linha;
     }
   }
-  // Processa o último buffer
+
   if (buffer) {
     const ato = processarAto(buffer, origem);
     if (ato) atos.push(ato);
@@ -113,6 +120,33 @@ function extrairAtosDoTexto(texto, origem) {
   return atos;
 }
 
+function processarAto(textoAto, origem) {
+  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Regex para capturar valores e código no final, mais flexível para espaços e formatos
+  const regex = /(.*)\sR?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*(\d+)$/;
+
+  const match = textoAto.match(regex);
+  if (!match) {
+    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
+    return null;
+  }
+
+  const descricao = match[1].trim();
+  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+
+  return {
+    descricao,
+    emol_bruto: parseValor(match[2]),
+    recompe: parseValor(match[3]),
+    emol_liquido: parseValor(match[4]),
+    issqn: parseValor(match[5]),
+    taxa_fiscal: parseValor(match[6]),
+    valor_final: parseValor(match[7]),
+    codigo: match[8],
+    origem,
+  };
+}
 function processarAto(textoAto, origem) {
   // Remove pipes e múltiplos espaços
   textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
