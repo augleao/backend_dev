@@ -81,7 +81,14 @@ async function extractTextWithPdfParse(filePath) {
 
 
 
-// Função robusta para extrair atos do texto do PDF das tabelas
+// Função robusta para extrair atos do texto das tabelas
+const codigosTabela07 = new Set([
+  '7101', '7201', '7302', '7402', '7501', '7502', '7701', '7802', '7803', '7804',
+  '7901', '7100', '7110', '7120', '7130', '7140', '7150', '7180', '7190', '7927'
+]);
+
+const codigosTabela08 = new Set(['8101', '8301', '8310']);
+
 function extrairAtosDoTexto(texto, origem) {
   const atos = [];
   const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -96,7 +103,6 @@ function extrairAtosDoTexto(texto, origem) {
   for (let i = 0; i < linhas.length; i++) {
     const linha = linhas[i];
 
-    // Ignorar linhas que contenham palavras-chave
     if (linhasIgnorar.some(palavra => linha.includes(palavra))) {
       continue;
     }
@@ -117,7 +123,44 @@ function extrairAtosDoTexto(texto, origem) {
     if (ato) atos.push(ato);
   }
 
-  return atos;
+  // Filtrar atos pelos códigos conforme a tabela
+  const codigosValidos = origem === 'Tabela 07' ? codigosTabela07 : codigosTabela08;
+
+  return atos
+    .filter(ato => codigosValidos.has(ato.codigo))
+    .map(ato => ({
+      descricao: ato.descricao,
+      valor_final: ato.valor_final,
+      codigo: ato.codigo,
+      origem: ato.origem
+    }));
+}
+
+function processarAto(textoAto, origem) {
+  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const regex = /(.*)\sR?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*R?\$?\s*([\d.,]+)\s*(\d+)$/;
+
+  const match = textoAto.match(regex);
+  if (!match) {
+    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
+    return null;
+  }
+
+  const descricao = match[1].trim();
+  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+
+  return {
+    descricao,
+    emol_bruto: parseValor(match[2]),
+    recompe: parseValor(match[3]),
+    emol_liquido: parseValor(match[4]),
+    issqn: parseValor(match[5]),
+    taxa_fiscal: parseValor(match[6]),
+    valor_final: parseValor(match[7]),
+    codigo: match[8],
+    origem,
+  };
 }
 
 function processarAto(textoAto, origem) {
