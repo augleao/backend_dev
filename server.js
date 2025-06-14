@@ -225,49 +225,6 @@ function extrairAtosTabela08(texto) {
   return atos;
 }
 
-function processarAto(textoAto, origem) {
-  // Remove pipes e múltiplos espaços
-  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
-
-  // Regex mais flexível para capturar valores e código no final
-  // Captura a descrição até o primeiro valor monetário, depois captura 6 valores monetários e o código no final
-  const regex = /^(.*?)(?:R?\$?\s*[\d.,]+\s+){6}(\d+)$/;
-
-  const match = textoAto.match(regex);
-  if (!match) {
-    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
-    return null;
-  }
-
-  const descricao = match[1].trim();
-
-  // Extrair os valores monetários e código usando outra regex para pegar todos os números no final
-  const valoresRegex = /R?\$?\s*([\d.,]+)/g;
-  const valores = [];
-  let m;
-  while ((m = valoresRegex.exec(textoAto)) !== null) {
-    valores.push(m[1]);
-  }
-
-  if (valores.length < 6) {
-    console.warn('Valores insuficientes para ato:', textoAto.substring(0, 100));
-    return null;
-  }
-
-  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
-
-  return {
-    descricao,
-    emol_bruto: parseValor(valores[0]),
-    recompe: parseValor(valores[1]),
-    emol_liquido: parseValor(valores[2]),
-    issqn: parseValor(valores[3]),
-    taxa_fiscal: parseValor(valores[4]),
-    valor_final: parseValor(valores[5]),
-    codigo: match[2],
-    origem,
-  };
-}
 
 // Middleware para autenticação
 function authenticate(req, res, next) {
