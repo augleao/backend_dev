@@ -84,65 +84,63 @@ async function extractTextWithPdfParse(filePath) {
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
   const atos = [];
-  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('| ---') && !l.startsWith('Tabela') && !l.match(/^(\d+|[a-z]\d*) -/i) === false);
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('| ---') && !l.startsWith('Tabela'));
 
-  for (let linha of linhas) {
-    // Ignorar linhas que são cabeçalhos ou rodapés
-    if (
-      linha.startsWith('Tabela') ||
-      linha.startsWith('---') ||
-      linha.startsWith('5 - Transcrição') ||
-      linha.startsWith('6 - (Revogado') ||
-      linha.startsWith('8 - Certidões') ||
-      linha.startsWith('16- (Revogado') ||
-      linha.startsWith('17- (Revogado') ||
-      linha.startsWith('18 Certidão') ||
-      linha.startsWith('19- Termo')
-    ) {
-      continue;
-    }
+  let buffer = '';
+  const isInicioAto = (linha) => /^\d+(\.\d+)?\s*-\s*/.test(linha); // Ex: "1 -", "5.1 -"
 
-    let partes = [];
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i];
 
-    if (linha.includes('|')) {
-      // Linha tabela: dividir por '|'
-      partes = linha.split('|').map(s => s.trim()).filter(s => s.length > 0);
-    } else {
-      // Linha texto corrido: extrair descrição e valores no final
-      // Exemplo: "5.1 - De assento de nascimento ... R$134.63 R$ 9.42 R$ 125.21 R$ 0.00 R$ 17.28 R$ 151.91 7501"
-      // Vamos separar por espaços e identificar os últimos 7 campos como valores e código
-      const tokens = linha.split(/\s+/);
-      if (tokens.length < 8) continue; // Linha muito curta para conter dados
-
-      // Os últimos 7 tokens são valores e código
-      const valores = tokens.slice(-7);
-      const descricao = tokens.slice(0, tokens.length - 7).join(' ');
-
-      partes = [descricao, ...valores];
-    }
-
-    if (partes.length >= 8) {
-      // Normalizar valores monetários: remover R$, espaços e converter para número (float)
-      function parseValor(v) {
-        if (!v) return 0;
-        return parseFloat(v.replace(/[R$\s]/g, '').replace(',', '.')) || 0;
+    if (isInicioAto(linha)) {
+      // Se já tem algo no buffer, processa antes de começar novo ato
+      if (buffer) {
+        const ato = processarAto(buffer, origem);
+        if (ato) atos.push(ato);
       }
-
-      atos.push({
-        descricao: partes[0],
-        emol_bruto: parseValor(partes[1]),
-        recompe: parseValor(partes[2]),
-        emol_liquido: parseValor(partes[3]),
-        issqn: parseValor(partes[4]),
-        taxa_fiscal: parseValor(partes[5]),
-        valor_final: parseValor(partes[6]),
-        codigo: partes[7],
-        origem,
-      });
+      buffer = linha;
+    } else {
+      // Continua juntando linhas ao buffer
+      buffer += ' ' + linha;
     }
+  }
+  // Processa o último buffer
+  if (buffer) {
+    const ato = processarAto(buffer, origem);
+    if (ato) atos.push(ato);
   }
 
   return atos;
+}
+
+function processarAto(textoAto, origem) {
+  // Remove pipes e múltiplos espaços
+  textoAto = textoAto.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Regex para capturar os valores monetários e código no final
+  // Exemplo: "Descrição ... R$299.48 R$20.96 R$278.52 R$0.00 R$45.08 R$344.56 7101"
+  const regex = /(.*)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\sR?\$?([\d.,]+)\s(\d+)$/;
+
+  const match = textoAto.match(regex);
+  if (!match) {
+    console.warn('Não conseguiu extrair ato:', textoAto.substring(0, 100));
+    return null;
+  }
+
+  const descricao = match[1].trim();
+  const parseValor = v => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+
+  return {
+    descricao,
+    emol_bruto: parseValor(match[2]),
+    recompe: parseValor(match[3]),
+    emol_liquido: parseValor(match[4]),
+    issqn: parseValor(match[5]),
+    taxa_fiscal: parseValor(match[6]),
+    valor_final: parseValor(match[7]),
+    codigo: match[8],
+    origem,
+  };
 }
 
 // Middleware para autenticação
