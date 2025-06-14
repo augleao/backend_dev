@@ -8,8 +8,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
-const Tesseract = require('tesseract.js');
-const { PdfConverter } = require('pdf-poppler');
+
 
 dotenv.config();
 
