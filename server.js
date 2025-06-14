@@ -575,8 +575,8 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
     const texto08 = fs.readFileSync(caminhoTabela08, 'utf8');
     console.log('Conteúdo tabela08 (primeiros 200 caracteres):', texto08.substring(0, 200));
 
-    const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
-    const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
+    const atos07 = extrairAtos(texto07, 'Tabela 07');
+    const atos08 = extrairAtos(texto08, 'Tabela 08');
 
     const atos = [...atos07, ...atos08];
 
