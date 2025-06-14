@@ -84,24 +84,64 @@ async function extractTextWithPdfParse(filePath) {
 // Função robusta para extrair atos do texto do PDF das tabelas
 function extrairAtosDoTexto(texto, origem) {
   const atos = [];
-  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l);
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('| ---') && !l.startsWith('Tabela') && !l.match(/^(\d+|[a-z]\d*) -/i) === false);
 
   for (let linha of linhas) {
-    const partes = linha.split('|').map(s => s.trim()); // Use o delimitador correto
+    // Ignorar linhas que são cabeçalhos ou rodapés
+    if (
+      linha.startsWith('Tabela') ||
+      linha.startsWith('---') ||
+      linha.startsWith('5 - Transcrição') ||
+      linha.startsWith('6 - (Revogado') ||
+      linha.startsWith('8 - Certidões') ||
+      linha.startsWith('16- (Revogado') ||
+      linha.startsWith('17- (Revogado') ||
+      linha.startsWith('18 Certidão') ||
+      linha.startsWith('19- Termo')
+    ) {
+      continue;
+    }
+
+    let partes = [];
+
+    if (linha.includes('|')) {
+      // Linha tabela: dividir por '|'
+      partes = linha.split('|').map(s => s.trim()).filter(s => s.length > 0);
+    } else {
+      // Linha texto corrido: extrair descrição e valores no final
+      // Exemplo: "5.1 - De assento de nascimento ... R$134.63 R$ 9.42 R$ 125.21 R$ 0.00 R$ 17.28 R$ 151.91 7501"
+      // Vamos separar por espaços e identificar os últimos 7 campos como valores e código
+      const tokens = linha.split(/\s+/);
+      if (tokens.length < 8) continue; // Linha muito curta para conter dados
+
+      // Os últimos 7 tokens são valores e código
+      const valores = tokens.slice(-7);
+      const descricao = tokens.slice(0, tokens.length - 7).join(' ');
+
+      partes = [descricao, ...valores];
+    }
+
     if (partes.length >= 8) {
+      // Normalizar valores monetários: remover R$, espaços e converter para número (float)
+      function parseValor(v) {
+        if (!v) return 0;
+        return parseFloat(v.replace(/[R$\s]/g, '').replace(',', '.')) || 0;
+      }
+
       atos.push({
         descricao: partes[0],
-        emol_bruto: partes[1],
-        recompe: partes[2],
-        emol_liquido: partes[3],
-        issqn: partes[4],
-        taxa_fiscal: partes[5],
-        valor_final: partes[6],
+        emol_bruto: parseValor(partes[1]),
+        recompe: parseValor(partes[2]),
+        emol_liquido: parseValor(partes[3]),
+        issqn: parseValor(partes[4]),
+        taxa_fiscal: parseValor(partes[5]),
+        valor_final: parseValor(partes[6]),
         codigo: partes[7],
         origem,
       });
     }
   }
+
   return atos;
 }
 
