@@ -64,10 +64,10 @@ const uploadAtos = multer({
   dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    if (file.mimetype === 'text/plain') {
       cb(null, true);
     } else {
-      cb(new Error('Apenas arquivos PDF são permitidos!'));
+      cb(new Error('Apenas arquivos de texto (.txt) são permitidos!'));
     }
   },
 });
@@ -132,40 +132,17 @@ function extrairAtosDoTexto(texto, origem) {
   const linhas = texto.split('\n').map(l => l.trim()).filter(l => l);
 
   for (let linha of linhas) {
-    // 1. Tabela Markdown (começa com | e tem pelo menos 7 pipes)
-    if (linha.startsWith('|') && (linha.match(/\|/g) || []).length >= 7) {
-      const partes = linha.split('|').map(s => s.trim()).filter(Boolean);
-      if (partes.length >= 8 && /^\d/.test(partes[0])) {
-        atos.push({
-          descricao: partes[0],
-          emol_bruto: partes[1],
-          recompe: partes[2],
-          emol_liquido: partes[3],
-          issqn: partes[4],
-          taxa_fiscal: partes[5],
-          valor_final: partes[6],
-          codigo: partes[7],
-          origem,
-        });
-      }
-      continue;
-    }
-
-    // 2. Linha corrida: descrição ... vários valores R$ ... código no final
-    // Exemplo: 5.1 - De assento ... R$134.63 R$ 9.42 R$ 125.21 R$ 0.00 R$ 17.28 R$ 151.91 7501
-    const match = linha.match(/(.+?)\s+R\$[\d.,]+(?:\s+R\$[\d.,]+){5}\s+(\d{4})$/);
-    if (match) {
-      // Extrai todos os valores monetários da linha
-      const valores = [...linha.matchAll(/R\$ ?([\d.,]+)/g)].map(v => v[1].replace('.', '').replace(',', '.'));
+    const partes = linha.split(';').map(s => s.trim()); // Use o delimitador correto
+    if (partes.length >= 8) {
       atos.push({
-        descricao: match[1].trim(),
-        emol_bruto: valores[0] || null,
-        recompe: valores[1] || null,
-        emol_liquido: valores[2] || null,
-        issqn: valores[3] || null,
-        taxa_fiscal: valores[4] || null,
-        valor_final: valores[5] || null,
-        codigo: match[2],
+        descricao: partes[0],
+        emol_bruto: partes[1],
+        recompe: partes[2],
+        emol_liquido: partes[3],
+        issqn: partes[4],
+        taxa_fiscal: partes[5],
+        valor_final: partes[6],
+        codigo: partes[7],
         origem,
       });
     }
@@ -453,7 +430,7 @@ app.get('/api/relatorios-todos', authenticate, requireRegistrador, async (req, r
   }
 });
 
-//rota para para usar OCR
+//rota para para importar atos
 
 app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
   { name: 'tabela07', maxCount: 1 },
@@ -461,35 +438,18 @@ app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fiel
 ]), async (req, res) => {
   try {
     if (!req.files || !req.files.tabela07 || !req.files.tabela08) {
-      console.log('Arquivos PDF não enviados corretamente.');
-      return res.status(400).json({ message: 'Envie os dois arquivos PDF.' });
+      console.log('Arquivos de texto não enviados corretamente.');
+      return res.status(400).json({ message: 'Envie os dois arquivos de texto.' });
     }
 
-    console.log('Arquivos recebidos:');
-    console.log('Tabela 07:', req.files.tabela07[0].originalname, '->', req.files.tabela07[0].path);
-    console.log('Tabela 08:', req.files.tabela08[0].originalname, '->', req.files.tabela08[0].path);
-
-    // Aqui usamos a função OCR para extrair texto
-    const texto07 = await pdfToTextWithOCR(req.files.tabela07[0].path);
-    const texto08 = await pdfToTextWithOCR(req.files.tabela08[0].path);
-
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 07  ===');
-    console.log('Texto completo Tabela 07:', texto07);
-    console.log('=== FIM TABELA 07 ===');
-
-    console.log('=== TEXTO EXTRAÍDO DA TABELA 08  ===');
-    console.log('Texto completo Tabela 08:', texto08);
-    console.log('=== FIM TABELA 08 ===');
+    const texto07 = fs.readFileSync(req.files.tabela07[0].path, 'utf8');
+    const texto08 = fs.readFileSync(req.files.tabela08[0].path, 'utf8');
 
     const atos07 = extrairAtosDoTexto(texto07, 'Tabela 07');
     const atos08 = extrairAtosDoTexto(texto08, 'Tabela 08');
 
-    console.log('Atos extraídos da Tabela 07:', atos07.length);
-    console.log('Atos extraídos da Tabela 08:', atos08.length);
-
     const atos = [...atos07, ...atos08];
 
-    // Remove arquivos temporários
     fs.unlink(req.files.tabela07[0].path, (err) => {
       if (err) console.error('Erro ao deletar arquivo Tabela 07:', err);
       else console.log('Arquivo Tabela 07 deletado.');
