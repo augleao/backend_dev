@@ -19,11 +19,7 @@ dotenv.config();
 
 app.use(express.json());
 
-..
-// Configuração do banco de dados
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'uma_chave_super_secreta';
