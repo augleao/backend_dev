@@ -9,15 +9,15 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
-const port = process.env.PORT || 3001;
+//const port = process.env.PORT || 3001;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // outras configs se necessário
 });
-const PORT = process.env.PORT || 3002;
+
 
 dotenv.config();
-
+const port = process.env.PORT || 3001;
 app.use(express.json());
 
 
@@ -364,8 +364,8 @@ app.delete('/api/atos-pagos/:id', authenticate, async (req, res) => {
 });
 // Iniciar servidor (exemplo)
 //const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
 
 //rota para obter um dado especifico por id atos do tj
