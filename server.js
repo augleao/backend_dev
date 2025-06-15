@@ -288,6 +288,83 @@ app.get('/api/atos', authenticate, async (req, res) => {
   }
 });
 
+//rotas para criar, deletar e listar atos por data 
+
+const express = require('express');
+const app = express();
+app.use(express.json());
+
+// Middleware de autenticação (exemplo)
+function authenticate(req, res, next) {
+  // Sua lógica de autenticação aqui
+  next();
+}
+
+// Exemplo de conexão com PostgreSQL usando 'pg'
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // outras configs se necessário
+});
+
+// Rota para buscar atos pagos por data
+app.get('/api/atos-pagos', authenticate, async (req, res) => {
+  const data = req.query.data; // espera 'YYYY-MM-DD'
+  if (!data) {
+    return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
+  }
+  try {
+    const result = await pool.query(
+      `SELECT * FROM atos_pagos WHERE data = $1 ORDER BY hora`,
+      [data]
+    );
+    res.json({ atosPagos: result.rows });
+  } catch (err) {
+    console.error('Erro ao buscar atos pagos:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+// Rota para adicionar um ato pago
+app.post('/api/atos-pagos', authenticate, async (req, res) => {
+  const { data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos } = req.body;
+  if (!data || !hora || !codigo || !descricao || !quantidade || !valor_unitario || !pagamentos) {
+    return res.status(400).json({ message: 'Dados incompletos.' });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO atos_pagos (data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao inserir ato pago:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+// Rota para deletar um ato pago pelo id
+app.delete('/api/atos-pagos/:id', authenticate, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await pool.query(`DELETE FROM atos_pagos WHERE id = $1`, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Ato não encontrado.' });
+    }
+    res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao deletar ato pago:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+// Iniciar servidor (exemplo)
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
+
 //rota para obter um dado especifico por id atos do tj
 
 app.get('/api/atos/:id', authenticate, async (req, res) => {
