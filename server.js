@@ -9,11 +9,17 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 
-
 dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // outras configs se necessário
+});
 
 const app = express();
 const port = process.env.PORT || 3001;
+app.use(express.json());
+
 
 // Configuração do banco de dados
 const pool = new Pool({
@@ -290,9 +296,9 @@ app.get('/api/atos', authenticate, async (req, res) => {
 
 //rotas para criar, deletar e listar atos por data 
 
-const express = require('express');
-const app = express();
-app.use(express.json());
+
+
+
 
 // Middleware de autenticação (exemplo)
 function authenticate(req, res, next) {
@@ -301,11 +307,8 @@ function authenticate(req, res, next) {
 }
 
 // Exemplo de conexão com PostgreSQL usando 'pg'
-const { Pool } = require('pg');
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // outras configs se necessário
-});
+
+
 
 // Rota para buscar atos pagos por data
 
