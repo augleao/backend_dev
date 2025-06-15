@@ -315,7 +315,27 @@ app.put('/api/atos/:id', authenticate, async (req, res) => {
   }
 });
 
+//rota para cadastrar atos via api
 
+app.post('/api/atos', authenticate, requireRegistrador, async (req, res) => {
+  const { codigo, descricao, emol_bruto, recompe, emol_liquido, issqn, taxa_fiscal, valor_final, origem } = req.body;
+
+  if (!codigo || !descricao) {
+    return res.status(400).json({ message: 'Código e descrição são obrigatórios.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO atos (codigo, descricao, emol_bruto, recompe, emol_liquido, issqn, taxa_fiscal, valor_final, origem)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [codigo, descricao, emol_bruto || null, recompe || null, emol_liquido || null, issqn || null, taxa_fiscal || null, valor_final || null, origem || null]
+    );
+    res.status(201).json({ ato: result.rows[0], message: 'Ato cadastrado com sucesso!' });
+  } catch (err) {
+    console.error('Erro ao cadastrar ato:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
 
 // Middleware para autenticação
 function authenticate(req, res, next) {
