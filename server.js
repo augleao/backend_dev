@@ -364,9 +364,9 @@ app.delete('/api/atos-pagos/:id', authenticate, async (req, res) => {
 });
 // Iniciar servidor (exemplo)
 //const PORT = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
-});
+//app.listen(port, () => {
+//  console.log(`Servidor rodando na porta ${port}`);
+//});
 
 //rota para obter um dado especifico por id atos do tj
 
