@@ -20,7 +20,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 app.use(express.json());
 
-
+// resto do código...
 // Configuração do banco de dados
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
