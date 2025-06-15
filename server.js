@@ -269,6 +269,54 @@ function processarAto(textoAto, origem) {
   };
 }
 
+//rota para listar os atos do tj
+
+app.get('/api/atos', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM atos');
+    res.json({ atos: result.rows });
+  } catch (err) {
+    console.error('Erro ao listar atos:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+//rota para obter um dado especifico por id atos do tj
+
+app.get('/api/atos/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM atos WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Ato não encontrado.' });
+    }
+    res.json({ ato: result.rows[0] });
+  } catch (err) {
+    console.error('Erro ao obter ato:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+//rota para atualziar um ato existente do tj
+
+app.put('/api/atos/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { descricao, emol_bruto, recompe, emol_liquido, issqn, taxa_fiscal, valor_final, origem } = req.body;
+  try {
+    await pool.query(
+      `UPDATE atos SET descricao = $1, emol_bruto = $2, recompe = $3, emol_liquido = $4,
+       issqn = $5, taxa_fiscal = $6, valor_final = $7, origem = $8 WHERE id = $9`,
+      [descricao, emol_bruto, recompe, emol_liquido, issqn, taxa_fiscal, valor_final, origem, id]
+    );
+    res.json({ message: 'Ato atualizado com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao atualizar ato:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+
+
 // Middleware para autenticação
 function authenticate(req, res, next) {
   const auth = req.headers.authorization;
