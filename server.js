@@ -8,19 +8,18 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
-
-dotenv.config();
-
+const app = express();
+const port = process.env.PORT || 3001;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // outras configs se necessário
 });
 
-const app = express();
-const port = process.env.PORT || 3001;
+dotenv.config();
+
 app.use(express.json());
 
-// resto do código...
+..
 // Configuração do banco de dados
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
