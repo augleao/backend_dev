@@ -308,6 +308,7 @@ const pool = new Pool({
 });
 
 // Rota para buscar atos pagos por data
+
 app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const data = req.query.data; // espera 'YYYY-MM-DD'
   if (!data) {
@@ -315,7 +316,10 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
   }
   try {
     const result = await pool.query(
-      `SELECT * FROM atos_pagos WHERE data = $1 ORDER BY hora`,
+      `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos
+       FROM atos_pagos
+       WHERE data = $1
+       ORDER BY hora`,
       [data]
     );
     res.json({ atosPagos: result.rows });
