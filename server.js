@@ -362,7 +362,7 @@ app.delete('/api/atos-pagos/:id', authenticate, async (req, res) => {
   }
 });
 // Iniciar servidor (exemplo)
-const PORT = process.env.PORT || 3001;
+//const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
