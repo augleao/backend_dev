@@ -315,6 +315,22 @@ app.put('/api/atos/:id', authenticate, async (req, res) => {
   }
 });
 
+//rota para referencia
+
+app.get('/api/atos', authenticate, async (req, res) => {
+  const search = req.query.search || '';
+  try {
+    const result = await pool.query(
+      `SELECT id, codigo, descricao FROM atos WHERE codigo ILIKE $1 OR descricao ILIKE $1 ORDER BY codigo LIMIT 20`,
+      [`%${search}%`]
+    );
+    res.json({ atos: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro ao buscar atos.' });
+  }
+});
+
 //rota para cadastrar atos via api
 
 app.post('/api/atos', authenticate, requireRegistrador, async (req, res) => {
