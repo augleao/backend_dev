@@ -338,7 +338,8 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO atos_pagos (data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos`,
       [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos]
     );
     res.status(201).json(result.rows[0]);
@@ -362,7 +363,6 @@ app.delete('/api/atos-pagos/:id', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
-
 // Iniciar servidor (exemplo)
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
