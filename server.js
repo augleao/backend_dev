@@ -14,6 +14,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // outras configs se necessário
 });
+const PORT = process.env.PORT || 3002;
 
 dotenv.config();
 
