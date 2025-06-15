@@ -272,8 +272,15 @@ function processarAto(textoAto, origem) {
 //rota para listar os atos do tj
 
 app.get('/api/atos', authenticate, async (req, res) => {
+  const search = req.query.search || ''; // Pega o parâmetro de busca da query string
   try {
-    const result = await pool.query('SELECT * FROM atos');
+    const result = await pool.query(
+      `SELECT id, codigo, descricao, valor_total FROM atos
+       WHERE codigo ILIKE $1 OR descricao ILIKE $1
+       ORDER BY codigo
+       LIMIT 20`,
+      [`%${search}%`] // Usa o parâmetro de busca na query
+    );
     res.json({ atos: result.rows });
   } catch (err) {
     console.error('Erro ao listar atos:', err);
@@ -297,7 +304,7 @@ app.get('/api/atos/:id', authenticate, async (req, res) => {
   }
 });
 
-//rota para atualziar um ato existente do tj
+//rota para atualizar um ato existente do tj
 
 app.put('/api/atos/:id', authenticate, async (req, res) => {
   const { id } = req.params;
