@@ -309,7 +309,7 @@ function authenticate(req, res, next) {
 // Rota para buscar atos pagos por data e usuário
 app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const data = req.query.data; // espera 'YYYY-MM-DD'
-  const usuario = req.usuario; // assumindo que o middleware authenticate define req.usuario
+  const usuario = req.user; // assumindo que o middleware authenticate define req.usuario
   if (!data) {
     return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
   }
@@ -336,7 +336,7 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
   const { data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario } = req.body;
 
   // Use o usuário autenticado do middleware, ignorando o que vier no corpo
-  const usuarioAutenticado = req.usuario;
+  const usuarioAutenticado = req.user;
 
   if (!data || !hora || !codigo || !descricao || !quantidade || !valor_unitario || !pagamentos) {
     return res.status(400).json({ message: 'Dados incompletos.' });
