@@ -306,23 +306,26 @@ function authenticate(req, res, next) {
 
 
 
+
 // Rota para buscar atos pagos por data e usuário
 app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const data = req.query.data; // espera 'YYYY-MM-DD'
-  const usuario = req.user; // assumindo que o middleware authenticate define req.usuario
+  const usuario = req.user; // middleware authenticate define req.user
+
   if (!data) {
     return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
   }
   if (!usuario) {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
+
   try {
     const result = await pool.query(
       `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
        FROM atos_pagos
        WHERE data = $1 AND usuario = $2
        ORDER BY hora`,
-      [data, usuario]
+      [data, usuario.id]  // <-- aqui usamos apenas o id do usuário
     );
     res.json({ atosPagos: result.rows });
   } catch (err) {
