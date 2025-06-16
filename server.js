@@ -358,7 +358,7 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
       `INSERT INTO atos_pagos (data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario`,
-      [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioAutenticado]
+      [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioId]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
