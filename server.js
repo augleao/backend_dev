@@ -337,6 +337,7 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
 
   // Use o usuário autenticado do middleware, ignorando o que vier no corpo
   const usuarioAutenticado = req.user;
+  const usuarioId = usuarioAutenticado.email; // ou usuarioAutenticado.email
 
   if (
   !data ||
