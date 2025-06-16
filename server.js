@@ -338,9 +338,17 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
   // Use o usuário autenticado do middleware, ignorando o que vier no corpo
   const usuarioAutenticado = req.user;
 
-  if (!data || !hora || !codigo || !descricao || !quantidade || !valor_unitario || !pagamentos) {
-    return res.status(400).json({ message: 'Dados incompletos.' });
-  }
+  if (
+  !data ||
+  !hora ||
+  !codigo ||
+  !descricao ||
+  !quantidade ||
+  valor_unitario == null || // aceita zero, mas não null/undefined
+  !pagamentos
+) {
+  return res.status(400).json({ message: 'Dados incompletos.' });
+}
   if (!usuarioAutenticado) {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
   }
