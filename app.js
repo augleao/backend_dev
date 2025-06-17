@@ -1,0 +1,53 @@
+// app.js
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const port = process.env.PORT || 3001;
+
+const allowedOrigins = [
+  'https://frontend-0f8x.onrender.com',
+  'https://www.bibliofilia.com.br',
+  'https://frontend-dev-e7yt.onrender.com'
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('O CORS não permite acesso deste domínio.'), false);
+    }
+    return callback(null, true);
+  },
+  optionsSuccessStatus: 200
+}));
+
+app.use(express.json());
+
+// Importar rotas
+const atosRoutes = require('./routes/atos');
+const atosPagosRoutes = require('./routes/atosPagos');
+const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
+const relatoriosRoutes = require('./routes/relatorios');
+const adminRoutes = require('./routes/admin');
+const importarAtosRoutes = require('./routes/importarAtos');
+
+// Usar rotas
+app.use('/api/atos', atosRoutes);
+app.use('/api/atos-pagos', atosPagosRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api', relatoriosRoutes); // Rotas de relatórios
+app.use('/api/admin', adminRoutes); // Rotas de administração
+app.use('/api/importar-atos', importarAtosRoutes); // Rota de importação de atos
+
+// Rota de teste
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API funcionando!', timestamp: new Date().toISOString() });
+});
+
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
+});
