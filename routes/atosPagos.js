@@ -16,7 +16,7 @@ router.get('/', authenticate, async (req, res) => {
     const result = await pool.query(
       `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
        FROM atos_pagos
-       WHERE data = $1 AND usuario = $2
+       WHERE DATE(data) = $1 AND usuario = $2
        ORDER BY hora`,
       [data, usuario.email]
     );
