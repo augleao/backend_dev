@@ -310,6 +310,7 @@ function authenticate(req, res, next) {
 // Rota para buscar atos pagos por data e usuário
 app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const data = req.query.data; // espera 'YYYY-MM-DD'
+  console.log('Data recebida do frontend:', data);
   const usuario = req.user; // middleware authenticate define req.user
 
   if (!data) {
@@ -323,7 +324,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
     const result = await pool.query(
       `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
        FROM atos_pagos
-       WHERE data = $1 AND usuario = $2
+       WHERE (data) = $1 AND usuario = $2
        ORDER BY hora`,
       [data, usuario.email]  // <-- aqui usamos apenas o id do usuário
     );
