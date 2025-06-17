@@ -337,7 +337,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
 // Rota para adicionar um ato pago com usuário
 app.post('/api/atos-pagos', authenticate, async (req, res) => {
   const { data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario } = req.body;
-
+console.log('Data recebida no backend:', data);  // <-- aqui
   // Use o usuário autenticado do middleware, ignorando o que vier no corpo
   const usuarioAutenticado = req.user;
   const usuarioId = usuarioAutenticado.email; // ou usuarioAutenticado.email
