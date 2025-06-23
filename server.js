@@ -837,7 +837,7 @@ app.post('/api/salvar-relatorio', authenticate, async (req, res) => {
 });
 
 // Rota para listar relatórios do usuário (protegida)
-app.get('/meus-relatorios', authenticate, async (req, res) => {
+app.get('/api/meus-relatorios', authenticate, async (req, res) => {
   try {
     let query = '';
     let params = [];
