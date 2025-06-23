@@ -81,6 +81,53 @@ async function extractTextWithPdfParse(filePath) {
 }
 
 
+//Configura o multer para múltiplos arquivos PDF
+
+const uploadPdfMultiple = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB por arquivo
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos PDF são permitidos!'));
+    }
+  },
+});
+
+//rota protegida (com authenticate) para receber os arquivos, extrair os dados e responder CNJ
+app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.array('files', 6), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Nenhum arquivo PDF enviado.' });
+    }
+
+    const resultados = [];
+
+    for (const file of req.files) {
+      const dadosExtraidos = await extrairDadosDoPdf(file.path);
+
+      resultados.push({
+        nomeArquivo: file.originalname,
+        dados: dadosExtraidos,
+      });
+
+      // Remove arquivo temporário
+      fs.unlink(file.path, (err) => {
+        if (err) console.error('Erro ao deletar arquivo temporário:', err);
+      });
+    }
+
+    res.json({
+      sucesso: true,
+      totalArquivos: req.files.length,
+      resultados,
+    });
+  } catch (error) {
+    console.error('Erro ao processar arquivos PDF:', error);
+    res.status(500).json({ error: 'Erro interno ao processar arquivos PDF.' });
+  }
+});
 
 
 // Função robusta para extrair atos do texto das tabelas
