@@ -837,21 +837,25 @@ app.post('/api/salvar-relatorio', authenticate, async (req, res) => {
 });
 
 // Rota para listar relatórios do usuário (protegida)
-app.get('/api/meus-relatorios', authenticate, async (req, res) => {
+app.get('/meus-relatorios', authenticate, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, email, cargo, serventia, data_geracao, dados_relatorio 
-       FROM relatorios 
-       WHERE user_id = $1 
-       ORDER BY data_geracao DESC`,
-      [req.user.id]
-    );
-    
+    let query = '';
+    let params = [];
+
+    if (req.user.cargo === 'Registrador') {
+      // Retorna todos os relatórios
+      query = 'SELECT * FROM relatorios ORDER BY data_geracao DESC';
+    } else {
+      // Retorna apenas os relatórios do usuário logado
+      query = 'SELECT * FROM relatorios WHERE user_id = $1 ORDER BY data_geracao DESC';
+      params = [req.user.id];
+    }
+
+    const result = await pool.query(query, params);
     res.json({ relatorios: result.rows });
-    
-  } catch (err) {
-    console.error('Erro ao buscar relatórios:', err);
-    return res.status(500).json({ message: 'Erro interno do servidor.' });
+  } catch (error) {
+    console.error('Erro ao buscar relatórios:', error);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
 
