@@ -85,7 +85,7 @@ async function extractTextWithPdfParse(filePath) {
 
 const uploadPdfMultiple = multer({
   dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB por arquivo
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -93,6 +93,54 @@ const uploadPdfMultiple = multer({
       cb(new Error('Apenas arquivos PDF são permitidos!'));
     }
   },
+});
+
+const campos = [
+  { name: 'file0', maxCount: 1 },
+  { name: 'file1', maxCount: 1 },
+  { name: 'file2', maxCount: 1 },
+  { name: 'file3', maxCount: 1 },
+  { name: 'file4', maxCount: 1 },
+  { name: 'file5', maxCount: 1 },
+];
+
+app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos), async (req, res) => {
+  try {
+    const arquivos = [];
+    for (let i = 0; i < 6; i++) {
+      const campo = `file${i}`;
+      if (req.files[campo] && req.files[campo][0]) {
+        arquivos.push(req.files[campo][0]);
+      }
+    }
+
+    if (arquivos.length !== 6) {
+      return res.status(400).json({ error: 'É necessário enviar exatamente 6 arquivos PDF.' });
+    }
+
+    const resultados = [];
+
+    for (const file of arquivos) {
+      const dadosExtraidos = await extrairDadosDoPdf(file.path);
+      resultados.push({
+        nomeArquivo: file.originalname,
+        dados: dadosExtraidos,
+      });
+
+      fs.unlink(file.path, (err) => {
+        if (err) console.error('Erro ao deletar arquivo temporário:', err);
+      });
+    }
+
+    res.json({
+      sucesso: true,
+      totalArquivos: arquivos.length,
+      resultados,
+    });
+  } catch (error) {
+    console.error('Erro ao processar arquivos PDF:', error);
+    res.status(500).json({ error: 'Erro interno ao processar arquivos PDF.', details: error.message });
+  }
 });
 
 //rota protegida (com authenticate) para receber os arquivos, extrair os dados e responder CNJ
