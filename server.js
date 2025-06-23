@@ -29,7 +29,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'uma_chave_super_secreta';
 const allowedOrigins = [
   'https://frontend-0f8x.onrender.com',
   'https://www.bibliofilia.com.br',
-  'https://frontend-dev-e7yt.onrender.com'
+  'https://frontend-dev-e7yt.onrender.com',
 ];
 
 const corsOptions = {
@@ -662,7 +662,7 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { nome, password } = req.body;
   
-  if (!email || !password) {
+  if (!nome || !password) {
     return res.status(400).json({ message: 'Nome de Usuário e senha são obrigatórios.' });
   }
 
@@ -680,9 +680,8 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
-    // Inclui cargo no token!
     const token = jwt.sign(
-      { id: user.id, email: user.email, cargo: user.cargo }, 
+      { id: user.id, nome: user.nome, cargo: user.cargo }, 
       JWT_SECRET, 
       { expiresIn: '8h' }
     );
