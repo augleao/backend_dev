@@ -153,7 +153,7 @@ app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos
 
     for (const file of arquivos) {
       console.log(`Processando arquivo: ${file.originalname}`);
-      const textoExtraido = await extrairDadosDoPdf(file.path);
+      const textoExtraido = await extractTextWithPdfParse(file.path);
       console.log('Tipo de textoExtraido:', typeof textoExtraido);
 console.log('Conteúdo (início):', textoExtraido.slice(0, 100));
       const dadosProcessados = processarTextoExtraido(textoExtraido);
