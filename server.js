@@ -143,6 +143,19 @@ app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos
   }
 });
 
+
+// Função para extrair texto do PDF usando pdf-parse
+async function extrairDadosDoPdf(filePath) {
+  const dataBuffer = fs.readFileSync(filePath);
+  const pdfData = await pdfParse(dataBuffer);
+  // Aqui você pode processar pdfData.text para extrair os dados que precisa
+  return {
+    textoExtraido: pdfData.text,
+    tamanho: pdfData.text.length,
+  };
+}
+
+
 //rota protegida (com authenticate) para receber os arquivos, extrair os dados e responder CNJ
 app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.array('files', 6), async (req, res) => {
   try {
