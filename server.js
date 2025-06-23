@@ -174,7 +174,7 @@ console.log('Conteúdo (início):', textoExtraido.slice(0, 100));
       dadosIndividuais: resultados,
       totais: {
         atosPraticados: resultados.reduce((sum, r) => sum + r.atosPraticados, 0),
-        arrecadacao: resultados.reduce((sum, r) => sum + r.emolumentoApurado + r.tfj + r.valoresRecompe + r.issqn, 0).toFixed(2),
+        arrecadacao: resultados.reduce((sum, r) => sum + r.emolumentoApurado + r.tfj + r.issqn, 0).toFixed(2),
         custeio: resultados.reduce((sum, r) => sum + r.totalDespesas, 0).toFixed(2),
         repasses: resultados.reduce((sum, r) => sum + r.recompeApurado + r.issqn + r.tfj, 0).toFixed(2),
       }
