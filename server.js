@@ -59,6 +59,7 @@ function processarTextoExtraido(texto) {
   const recompeMatch = texto.match(/RECOMPE.*?Apurado:\s*R\$\s*([\d\.,]+)/i);
   const issqnMatch = texto.match(/ISSQN recebido dos usuários:\s*R\$\s*([\d\.,]+)/i);
   const totalDespesasMatch = texto.match(/Total de despesas do mês:\s*R\$\s*([\d\.,]+)/i);
+  const recompeRecebidoMatch = texto.match(/Valores recebidos do RECOMPE:\s*R\$\s*([\d\.,]+)/i);
 
   const atosMatch = texto.match(/Total\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i);
 
@@ -73,6 +74,7 @@ function processarTextoExtraido(texto) {
     valoresRecompe: recompeMatch ? parseValor(recompeMatch[1]) : 0,
     issqn: issqnMatch ? parseValor(issqnMatch[1]) : 0,
     recompeApurado: recompeMatch ? parseValor(recompeMatch[1]) : 0,
+    recompeRecebido: recompeRecebidoMatch ? parseValor(recompeRecebidoMatch[1]) : 0,
     totalDespesas: totalDespesasMatch ? parseValor(totalDespesasMatch[1]) : 0,
   };
 }
@@ -174,7 +176,7 @@ console.log('Conteúdo (início):', textoExtraido.slice(0, 100));
       dadosIndividuais: resultados,
       totais: {
         atosPraticados: resultados.reduce((sum, r) => sum + r.atosPraticados, 0),
-        arrecadacao: resultados.reduce((sum, r) => sum + r.emolumentoApurado + r.tfj + r.issqn, 0).toFixed(2),
+        arrecadacao: resultados.reduce((sum, r) => sum + r.emolumentoApurado + r.recompeRecebido + r.tfj + r.issqn, 0).toFixed(2),
         custeio: resultados.reduce((sum, r) => sum + r.totalDespesas, 0).toFixed(2),
         repasses: resultados.reduce((sum, r) => sum + r.recompeApurado + r.issqn + r.tfj, 0).toFixed(2),
       }
