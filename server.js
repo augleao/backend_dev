@@ -660,14 +660,14 @@ app.post('/api/signup', async (req, res) => {
 
 // Login de usuário
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { nome, password } = req.body;
   
   if (!email || !password) {
-    return res.status(400).json({ message: 'Email e senha são obrigatórios.' });
+    return res.status(400).json({ message: 'Nome de Usuário e senha são obrigatórios.' });
   }
 
   try {
-    const result = await pool.query('SELECT * FROM public.users WHERE email = $1', [email]);
+    const result = await pool.query('SELECT * FROM public.users WHERE nome = $1', [nome]);
     
     if (!result.rowCount) {
       return res.status(401).json({ message: 'Credenciais inválidas.' });
