@@ -47,6 +47,36 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Função para processar texto extraído e capturar os dados reais
+function processarTextoExtraido(texto) {
+  const parseValor = (str) => {
+    if (!str) return 0;
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  };
+
+  const emolumentoMatch = texto.match(/Emolumento Apurado:\s*R\$\s*([\d\.,]+)/i);
+  const tfjMatch = texto.match(/Taxa de Fiscalização Judiciária Apurada:\s*R\$\s*([\d\.,]+)/i);
+  const recompeMatch = texto.match(/RECOMPE.*?Apurado:\s*R\$\s*([\d\.,]+)/i);
+  const issqnMatch = texto.match(/ISSQN recebido dos usuários:\s*R\$\s*([\d\.,]+)/i);
+  const totalDespesasMatch = texto.match(/Total de despesas do mês:\s*R\$\s*([\d\.,]+)/i);
+
+  const atosMatch = texto.match(/Total\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i);
+
+  const atosPraticados = atosMatch
+    ? atosMatch.slice(1).reduce((acc, val) => acc + parseInt(val, 10), 0)
+    : 0;
+
+  return {
+    atosPraticados,
+    emolumentoApurado: emolumentoMatch ? parseValor(emolumentoMatch[1]) : 0,
+    tfj: tfjMatch ? parseValor(tfjMatch[1]) : 0,
+    valoresRecompe: recompeMatch ? parseValor(recompeMatch[1]) : 0,
+    issqn: issqnMatch ? parseValor(issqnMatch[1]) : 0,
+    recompeApurado: recompeMatch ? parseValor(recompeMatch[1]) : 0,
+    totalDespesas: totalDespesasMatch ? parseValor(totalDespesasMatch[1]) : 0,
+  };
+}
+
 // Configuração do multer para upload de arquivos (single)
 const upload = multer({
   dest: 'uploads/',
@@ -104,6 +134,7 @@ const campos = [
   { name: 'file5', maxCount: 1 },
 ];
 
+// Rota para importar e processar até 6 arquivos PDF
 app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos), async (req, res) => {
   try {
     const arquivos = [];
@@ -121,10 +152,13 @@ app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos
     const resultados = [];
 
     for (const file of arquivos) {
-      const dadosExtraidos = await extrairDadosDoPdf(file.path);
+      console.log(`Processando arquivo: ${file.originalname}`);
+      const textoExtraido = await extrairDadosDoPdf(file.path);
+      const dadosProcessados = processarTextoExtraido(textoExtraido);
+
       resultados.push({
         nomeArquivo: file.originalname,
-        dados: dadosExtraidos,
+        ...dadosProcessados,
       });
 
       fs.unlink(file.path, (err) => {
@@ -135,7 +169,13 @@ app.post('/api/importar-atos-pdf', authenticate, uploadPdfMultiple.fields(campos
     res.json({
       sucesso: true,
       totalArquivos: arquivos.length,
-      resultados,
+      dadosIndividuais: resultados,
+      totais: {
+        atosPraticados: resultados.reduce((sum, r) => sum + r.atosPraticados, 0),
+        arrecadacao: resultados.reduce((sum, r) => sum + r.emolumentoApurado + r.tfj + r.valoresRecompe + r.issqn, 0).toFixed(2),
+        custeio: resultados.reduce((sum, r) => sum + r.totalDespesas, 0).toFixed(2),
+        repasses: resultados.reduce((sum, r) => sum + r.recompeApurado + r.issqn + r.tfj, 0).toFixed(2),
+      }
     });
   } catch (error) {
     console.error('Erro ao processar arquivos PDF:', error);
