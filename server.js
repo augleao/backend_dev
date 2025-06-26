@@ -481,8 +481,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
       [data, usuario.email]  // <-- aqui usamos apenas o id do usuário
     );
     res.json({ atosPagos: result.rows });
-    console.log('Atos enviados para o frontend:', atosPagos); // <-- LOG AQUI
-  } catch (err) {
+    } catch (err) {
     console.error('Erro ao buscar atos pagos:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
