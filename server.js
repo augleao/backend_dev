@@ -478,7 +478,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
        FROM atos_pagos
        WHERE (data) = $1 AND usuario = $2
        ORDER BY hora`,
-      [data, usuario.email]  // <-- aqui usamos apenas o id do usuário
+      [data, usuario.nome]  // <-- aqui usamos apenas o id do usuário
     );
     res.json({ atosPagos: result.rows });
     } catch (err) {
