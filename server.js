@@ -493,7 +493,7 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
   console.log('Data recebida no backend:', data);  // <-- aqui
   // Use o usuário autenticado do middleware, ignorando o que vier no corpo
   const usuarioAutenticado = req.user;
-  const usuarioId = usuarioAutenticado.email; // ou usuarioAutenticado.email
+  const usuarioId = usuarioAutenticado.nome; // ou usuarioAutenticado.email
 
   if (
     !data ||
