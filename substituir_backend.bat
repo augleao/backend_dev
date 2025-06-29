@@ -13,7 +13,7 @@ if not exist ".git" (
 )
 
 echo Passo 1: Adicionando repositorio backend_dev como remoto temporario...
-git remote add devrepo https://github.com/seu-usuario/backend_dev.git
+git remote add devrepo https://github.com/augleao/backend_dev.git
 if %errorlevel% neq 0 (
     echo Remoto ja existe ou erro ao adicionar. Continuando...
 )
