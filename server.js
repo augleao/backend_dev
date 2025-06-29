@@ -584,6 +584,7 @@ router.get('/meus-fechamentos', async (req, res) => {
 
     res.json({ fechamentos });
   } catch (err) {
+    console.error('Erro ao buscar fechamentos:', err); // <-- Veja esse log no backend!
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
   }
 });
