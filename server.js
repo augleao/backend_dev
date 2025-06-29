@@ -17,7 +17,7 @@ const pool = new Pool({
 
 
 const router = express.Router();
-const { AtosPagos } = require('../models/AtosPagos'); // ajuste conforme seu model
+//const { AtosPagos } = require('../models/AtosPagos'); // ajuste conforme seu model
 
 dotenv.config();
 const port = process.env.PORT || 3001;
