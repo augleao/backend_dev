@@ -21,6 +21,7 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
       [usuario]
     );
 
+    console.log('Fechamentos encontrados:', result.rows);
     res.json({ fechamentos: result.rows });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
