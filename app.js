@@ -27,7 +27,7 @@ app.use(express.json());
 
 // Importar rotas
 const atosRoutes = require('./routes/atos');
-const atosPagosRoutes = require('./routes/atosPagos');
+const atosPagosRoutes = require('./routes/AtosPagos');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const relatoriosRoutes = require('./routes/relatorios');
