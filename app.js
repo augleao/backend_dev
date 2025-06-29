@@ -33,6 +33,7 @@ const uploadRoutes = require('./routes/upload');
 const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
+const fechamentosRoutes = require('./routes/fechamentos');
 
 // Usar rotas
 app.use('/api/atos', atosRoutes);
@@ -42,7 +43,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api', relatoriosRoutes); // Rotas de relatórios
 app.use('/api/admin', adminRoutes); // Rotas de administração
 app.use('/api/importar-atos', importarAtosRoutes); // Rota de importação de atos
-
+app.use('/api', fechamentosRoutes); // Rota de RELATORIO DE FECHAMENTO DE CAIXA
 // Rota de teste
 app.get('/api/test', (req, res) => {
   res.json({ message: 'API funcionando!', timestamp: new Date().toISOString() });
