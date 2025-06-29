@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-//const { AtosPagos } = require('../models/AtosPagos'); // ajuste o caminho conforme seu projeto
+const pool = require('../db');
 
 // Exemplo de middleware de autenticação (ajuste conforme seu projeto)
 const autenticar = (req, res, next) => {
