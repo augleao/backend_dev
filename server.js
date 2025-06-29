@@ -929,6 +929,9 @@ app.get('/api/relatorios-todos', authenticate, requireRegistrador, async (req, r
   }
 });
 
+const fechamentosRouter = require('./routes/fechamentos');
+app.use('/api', fechamentosRouter);
+
 //rota para para importar atos
 
 app.post('/api/importar-atos', authenticate, requireRegistrador, uploadAtos.fields([
