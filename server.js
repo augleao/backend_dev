@@ -15,7 +15,7 @@ const pool = new Pool({
   // outras configs se necessário
 });
 
-);
+
 const router = express.Router();
 //const { AtosPagos } = require('../models/AtosPagos'); // ajuste conforme seu model
 
