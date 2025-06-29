@@ -17,7 +17,22 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
 
     // Busca todos os atos pagos do usuário no banco PostgreSQL
     const result = await pool.query(
-      `SELECT * FROM public.atos_pagos WHERE usuario = $1 ORDER BY data DESC, hora DESC`,
+      `SELECT
+  data,
+  codigo,
+  descricao,
+  SUM(quantidade) AS total_quantidade,
+  SUM(valor_unitario) AS total_valor,
+  usuario
+FROM
+  public.atos_pagos
+WHERE
+  usuario = 'NOME_DO_USUARIO'
+  AND codigo = '0001'
+GROUP BY
+  data, codigo, descricao, usuario
+ORDER BY
+  data DESC;`,
       [usuario]
     );
 
