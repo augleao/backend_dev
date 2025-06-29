@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'uma_chave_super_secreta';
 
-// Exemplo de middleware de autenticação (ajuste conforme seu projeto)
+// Middleware de autenticação
 const autenticar = (req, res, next) => {
-  // Aqui você deve validar o token e preencher req.user com o nome do usuário
-  // Exemplo fictício:
-  req.user = { nome: 'Alessandra Dias' };
-  next();
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ erro: 'Token não fornecido' });
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // O payload do token deve conter o nome do usuário
+    next();
+  } catch (err) {
+    return res.status(401).json({ erro: 'Token inválido' });
+  }
 };
 
 router.get('/meus-fechamentos', autenticar, async (req, res) => {
