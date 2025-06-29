@@ -27,7 +27,7 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
 FROM
   public.atos_pagos
 WHERE
-  usuario = 'NOME_DO_USUARIO'
+  usuario = $1
   AND codigo = '0001'
 GROUP BY
   data, codigo, descricao, usuario
