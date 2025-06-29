@@ -6,7 +6,7 @@ const pool = require('../db');
 const autenticar = (req, res, next) => {
   // Aqui você deve validar o token e preencher req.user com o nome do usuário
   // Exemplo fictício:
-  req.user = { nome: 'NOME_DO_USUARIO_AUTENTICADO' };
+  req.user = { nome: 'Alessandra Dias' };
   next();
 };
 
@@ -35,7 +35,7 @@ ORDER BY
   data DESC;`,
       [usuario]
     );
-
+    console.log('Usuario:', usuario);
     console.log('Fechamentos encontrados:', result.rows);
     res.json({ fechamentos: result.rows });
   } catch (err) {
