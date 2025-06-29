@@ -15,13 +15,13 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
     const usuario = req.user?.nome;
     if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
 
-    // Busca todos os atos pagos do usuário
-    const fechamentos = await AtosPagos.findAll({
-      where: { usuario },
-      order: [['data', 'DESC'], ['hora', 'DESC']]
-    });
+    // Busca todos os atos pagos do usuário no banco PostgreSQL
+    const result = await pool.query(
+      `SELECT * FROM atos_pagos WHERE usuario = $1 ORDER BY data DESC, hora DESC`,
+      [usuario]
+    );
 
-    res.json({ fechamentos });
+    res.json({ fechamentos: result.rows });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
   }
