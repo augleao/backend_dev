@@ -507,7 +507,19 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
     }
   }
 
-  // ...restante do código de inserção...
+  // Inserção do ato pago
+  try {
+    const result = await pool.query(
+      `INSERT INTO atos_pagos (data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioId]
+    );
+    res.status(201).json({ atoPago: result.rows[0], message: 'Ato pago cadastrado com sucesso!' });
+  } catch (err) {
+    console.error('Erro ao cadastrar ato pago:', err);
+    res.status(500).json({ message: 'Erro interno ao cadastrar ato pago.' });
+  }
 });
 
 // Rota para deletar um ato pago pelo id
