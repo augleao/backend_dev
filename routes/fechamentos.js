@@ -24,25 +24,27 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
     const usuario = req.user?.nome;
     if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
 
+    // Busca atos pagos do usuário com codigo 0001 ou 0005
     const result = await pool.query(
       `SELECT
-        f.data,
-        f.hora AS hora_fechamento,
-        f.valor_unitario AS valor_final,
-        i.valor_unitario AS valor_inicial
+        data,
+        hora,
+        codigo,
+        descricao,
+        quantidade AS total_quantidade,
+        valor_unitario AS total_valor,
+        usuario
       FROM
-        public.atos_pagos f
-      LEFT JOIN public.atos_pagos i
-        ON f.data = i.data
-        AND f.usuario = i.usuario
-        AND i.codigo = '0005'
+        public.atos_pagos
       WHERE
-        f.usuario = $1
-        AND f.codigo = '0001'
+        usuario = $1
+        AND codigo IN ('0001', '0005')
       ORDER BY
-        f.data DESC, f.hora DESC;`,
+        data DESC, hora DESC;`,
       [usuario]
     );
+    console.log('Usuario:', usuario);
+    console.log('Fechamentos encontrados:', result.rows);
     res.json({ fechamentos: result.rows });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
