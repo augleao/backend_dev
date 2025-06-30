@@ -24,23 +24,23 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
     const usuario = req.user?.nome;
     if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
 
-    // Busca todos os atos pagos do usuário no banco PostgreSQL
+    // Busca atos pagos do usuário com codigo 0001 ou 0005
     const result = await pool.query(
       `SELECT
-    data,
-    hora,
-    codigo,
-    descricao,
-    quantidade AS total_quantidade,
-    valor_unitario AS total_valor,
-    usuario
-  FROM
-    public.atos_pagos
-  WHERE
-    usuario = $1
-    AND codigo = '0001'
-  ORDER BY
-    data DESC, hora DESC;`,
+        data,
+        hora,
+        codigo,
+        descricao,
+        quantidade AS total_quantidade,
+        valor_unitario AS total_valor,
+        usuario
+      FROM
+        public.atos_pagos
+      WHERE
+        usuario = $1
+        AND codigo IN ('0001', '0005')
+      ORDER BY
+        data DESC, hora DESC;`,
       [usuario]
     );
     console.log('Usuario:', usuario);
