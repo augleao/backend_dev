@@ -493,37 +493,21 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
 // Rota para adicionar um ato pago com usuário
 app.post('/api/atos-pagos', authenticate, async (req, res) => {
   const { data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos } = req.body;
-  console.log('Data recebida no backend:', data);  // <-- aqui
-  // Use o usuário autenticado do middleware, ignorando o que vier no corpo
   const usuarioAutenticado = req.user;
-  const usuarioId = usuarioAutenticado.nome; // ou usuarioAutenticado.email
+  const usuarioId = usuarioAutenticado.nome;
 
-  if (
-    !data ||
-    !hora ||
-    !codigo ||
-    !descricao ||
-    !quantidade ||
-    valor_unitario == null || // aceita zero, mas não null/undefined
-    !pagamentos
-  ) {
-    return res.status(400).json({ message: 'Dados incompletos.' });
-  }
-  if (!usuarioAutenticado) {
-    return res.status(401).json({ message: 'Usuário não autenticado.' });
-  }
-  try {
-    const result = await pool.query(
-      `INSERT INTO atos_pagos (data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario`,
-      [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioId]
+  // Verificação para códigos 0001 e 0005
+  if (codigo === '0001' || codigo === '0005') {
+    const existe = await pool.query(
+      `SELECT 1 FROM atos_pagos WHERE data = $1 AND usuario = $2 AND codigo = $3`,
+      [data, usuarioId, codigo]
     );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error('Erro ao inserir ato pago:', err);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
+    if (existe.rowCount > 0) {
+      return res.status(409).json({ message: `Já existe um ato com código ${codigo} para este dia e usuário.` });
+    }
   }
+
+  // ...restante do código de inserção...
 });
 
 // Rota para deletar um ato pago pelo id
