@@ -556,36 +556,7 @@ app.get('/api/atos/:id', authenticate, async (req, res) => {
 
 
 
-// Rota: lista atos do usuário agrupados por data e código
-router.get('/meus-fechamentos', async (req, res) => {
-  try {
-    // Supondo que o nome do usuário está no token JWT (req.user.nome)
-    const usuario = req.user?.nome;
-    if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
 
-    // Agrupa por data e código, somando quantidade e valor_unitario
-    const fechamentos = await AtosPagos.aggregate([
-      { $match: { usuario: usuario } },
-      {
-        $group: {
-          _id: { data: "$data", codigo: "$codigo" },
-          descricao: { $first: "$descricao" },
-          quantidade: { $sum: "$quantidade" },
-          valor_unitario: { $sum: "$valor_unitario" },
-          hora: { $first: "$hora" }
-        }
-      },
-      { $sort: { "_id.data": -1, "_id.codigo": 1 } }
-    ]);
-
-    res.json({ fechamentos });
-  } catch (err) {
-    console.error('Erro ao buscar fechamentos:', err); // <-- Veja esse log no backend!
-    res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
-  }
-});
-
-module.exports = router;
 
 //rota para atualizar um ato existente do tj
 
