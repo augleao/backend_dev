@@ -35,10 +35,12 @@ const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
 const atosPraticados = require('./routes/rota_atos_praticados');
+const atosTabela = require('./routes/rota_atos_tabela');
 
 
 
 // Usar rotas
+app.use('/api/atos-tabela', atosTabela);
 app.use('/api/atos-praticados', atosPraticados);
 app.use('/api/atos', atosRoutes);
 app.use('/api/caixa-diario', caixaDiarioRoutes);
