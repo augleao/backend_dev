@@ -166,7 +166,7 @@ router.post('/', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      pagamentos || {}, // JSON vazio se não fornecido
+      JSON.stringify(pagamentos || {}), // Sempre converter para JSON string
       usuario
     ];
     
