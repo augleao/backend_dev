@@ -17,7 +17,7 @@ const pool = new Pool({
 
 
 const router = express.Router();
-//const { AtosPagos } = require('../models/AtosPagos'); // ajuste conforme seu model
+
 
 dotenv.config();
 const port = process.env.PORT || 3001;
@@ -483,7 +483,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
        ORDER BY hora`,
       [data, usuario.nome]  // <-- aqui usamos apenas o id do usuário
     );
-    res.json({ atosPagos: result.rows });
+    res.json({ CaixaDiario: result.rows });
     } catch (err) {
     console.error('Erro ao buscar atos pagos:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });

@@ -27,7 +27,7 @@ app.use(express.json());
 
 // Importar rotas
 const atosRoutes = require('./routes/atos');
-const atosPagosRoutes = require('./routes/AtosPagos');
+const caixaDiarioRoutes = require('./routes/CaixaDiario');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const relatoriosRoutes = require('./routes/relatorios');
@@ -37,7 +37,7 @@ const fechamentosRoutes = require('./routes/fechamentos');
 
 // Usar rotas
 app.use('/api/atos', atosRoutes);
-app.use('/api/atos-pagos', atosPagosRoutes);
+app.use('/api/caixa-diario', caixaDiarioRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api', relatoriosRoutes); // Rotas de relatórios

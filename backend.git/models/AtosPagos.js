@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db'); // ajuste o caminho para sua instância do Sequelize
 
-const AtosPagos = sequelize.define('AtosPagos', {
+const aixaDiario = sequelize.define('CaixaDiario', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -42,4 +42,4 @@ const AtosPagos = sequelize.define('AtosPagos', {
   timestamps: false        // se não usar createdAt/updatedAt
 });
 
-module.exports = { AtosPagos };
+module.exports = { caixaDiario };

@@ -1,4 +1,4 @@
-// routes/atosPagos.js
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
        ORDER BY hora`,
       [data, usuario.email]
     );
-    res.json({ atosPagos: result.rows });
+    res.json({ CaixaDiario: result.rows });
   } catch (err) {
     console.error('Erro ao buscar atos pagos:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });
