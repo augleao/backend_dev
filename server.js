@@ -1085,3 +1085,6 @@ app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
+const codigosGratuitosRouter = require('./routes/codigosGratuitos');
+app.use('/api/codigos-gratuitos', codigosGratuitosRouter);
