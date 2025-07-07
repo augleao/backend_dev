@@ -34,13 +34,15 @@ const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
-const atosPraticados = require('./routes/atos_praticados'); // Rota para atos praticados
-const atosTabela = require('./routes/atos-tabela'); // Rota para atos praticados
+//const atosPraticados = require('./routes/atos_praticados'); // Rota para atos praticados
+//const atosTabela = require('./routes/atos-tabela'); // Rota para atos praticados
 
+const atosPraticados = require("./routes/rota_atos_praticados");
+app.use("/api/atos-tabela", atosPraticados);
 
 // Usar rotas
-app.use('/api/atos-tabela', atosTabela);
-app.use('/api/atos-praticados', atosPraticados); // Rota para atos praticados
+//app.use('/api/atos-tabela', atosTabela);
+//app.use('/api/atos-praticados', atosPraticados); // Rota para atos praticados
 app.use('/api/atos', atosRoutes);
 app.use('/api/caixa-diario', caixaDiarioRoutes);
 app.use('/api/auth', authRoutes);
