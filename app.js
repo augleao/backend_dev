@@ -35,7 +35,7 @@ const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
 const atosPraticados = require('./routes/atos_praticados'); // Rota para atos praticados
-const atosTabela = require('./routes/atos_tabela'); // Rota para atos praticados
+const atosTabela = require('./routes/atos-tabela'); // Rota para atos praticados
 
 
 // Usar rotas
