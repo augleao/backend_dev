@@ -34,15 +34,18 @@ const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
+
 //const atosPraticados = require('./routes/atos_praticados'); // Rota para atos praticados
 //const atosTabela = require('./routes/atos-tabela'); // Rota para atos praticados
 
+const atosPraticadosRouter = require('./routes/atosPraticados');
+app.use('/api/atos-praticados', atosPraticadosRouter);
 
 // Usar rotas
 //app.use('/api/atos-tabela', atosTabela);
 //app.use('/api/atos-praticados', atosPraticados); // Rota para atos praticados
 
-app.use('/api/atos-praticados', require('./routes/atosPraticados'));
+//app.use('/api/atos-praticados', require('./routes/atosPraticados'));
 app.use('/api/codigos-gratuitos', require('./routes/codigosGratuitos'));
 
 app.use('/api/atos', atosRoutes);
