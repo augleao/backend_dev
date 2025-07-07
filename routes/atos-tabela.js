@@ -1,37 +1,29 @@
-// Rota /api/atos-tabela para o backend Node.js/Express.js
-// Arquivo: routes/atos-tabela.js ou similar
-
 const express = require('express');
 const router = express.Router();
-const pool = require('../db'); // Ajuste o caminho conforme sua estrutura
+const pool = require('../db');
 
 // Middleware de autenticação (ajuste conforme seu sistema)
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('[atos-tabela][auth] Authorization header:', authHeader);
   if (!token) {
+    console.log('[atos-tabela][auth] Token não fornecido!');
     return res.status(401).json({ error: 'Token de acesso requerido' });
   }
 
-  // Aqui você deve validar o JWT token
-  // jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-  //   if (err) return res.status(403).json({ error: 'Token inválido' });
-  //   req.user = user;
-  //   next();
-  // });
-  
-  // Por enquanto, vamos pular a validação para teste
+  // Aqui você pode validar o token se desejar
+  // jwt.verify(token, process.env.JWT_SECRET, (err, user) => { ... });
+
   next();
 };
 
-// GET /api/atos-tabela?data=YYYY-MM-DD
 // Buscar atos por data
 router.get('/', authenticateToken, async (req, res) => {
   const { data } = req.query;
-  
-  console.log('[atos-tabela] GET - Buscar atos por data:', data);
-  
+  console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
+
   try {
     let query = `
       SELECT 
@@ -48,30 +40,27 @@ router.get('/', authenticateToken, async (req, res) => {
         created_at
       FROM atos_tabela
     `;
-    
     let params = [];
-    
     if (data) {
       query += ' WHERE data = $1';
       params.push(data);
     }
-    
     query += ' ORDER BY data DESC, hora DESC, created_at DESC';
-    
-    console.log('[atos-tabela] Query:', query, 'Params:', params);
-    
+
+    console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
+
     const result = await pool.query(query, params);
-    
-    console.log('[atos-tabela] Resultados encontrados:', result.rowCount);
-    
+
+    console.log('[atos-tabela][GET] Resultados encontrados:', result.rowCount);
+
     res.json({
       success: true,
       atos: result.rows,
       total: result.rowCount
     });
-    
+
   } catch (error) {
-    console.error('[atos-tabela] Erro ao buscar atos:', error);
+    console.error('[atos-tabela][GET] Erro ao buscar atos:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar atos'
@@ -80,8 +69,9 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // POST /api/atos-tabela
-// Adicionar novo ato
 router.post('/', authenticateToken, async (req, res) => {
+  console.log('[atos-tabela][POST] Body recebido:', req.body);
+
   const {
     data,
     hora,
@@ -93,16 +83,15 @@ router.post('/', authenticateToken, async (req, res) => {
     pagamentos,
     detalhes_pagamentos
   } = req.body;
-  
-  console.log('[atos-tabela] POST - Adicionar novo ato:', req.body);
-  
+
   // Validações básicas
   if (!data || !hora || !codigo || !descricao) {
+    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
     return res.status(400).json({
       error: 'Campos obrigatórios: data, hora, codigo, descricao'
     });
   }
-  
+
   try {
     const query = `
       INSERT INTO atos_tabela (
@@ -118,7 +107,7 @@ router.post('/', authenticateToken, async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
-    
+
     const params = [
       data,
       hora,
@@ -130,22 +119,22 @@ router.post('/', authenticateToken, async (req, res) => {
       typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
       detalhes_pagamentos || null
     ];
-    
-    console.log('[atos-tabela] Query INSERT:', query);
-    console.log('[atos-tabela] Params:', params);
-    
+
+    console.log('[atos-tabela][POST] Query INSERT:', query);
+    console.log('[atos-tabela][POST] Params:', params);
+
     const result = await pool.query(query, params);
-    
-    console.log('[atos-tabela] Ato inserido com sucesso:', result.rows[0]);
-    
+
+    console.log('[atos-tabela][POST] Ato inserido com sucesso:', result.rows[0]);
+
     res.status(201).json({
       success: true,
       message: 'Ato adicionado com sucesso',
       ato: result.rows[0]
     });
-    
+
   } catch (error) {
-    console.error('[atos-tabela] Erro ao inserir ato:', error);
+    console.error('[atos-tabela][POST] Erro ao inserir ato:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
@@ -154,38 +143,38 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/atos-tabela/:id
-// Remover ato por ID
 router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  
-  console.log('[atos-tabela] DELETE - Remover ato ID:', id);
-  
+  console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
+
   if (!id || isNaN(id)) {
+    console.log('[atos-tabela][DELETE] ID inválido!');
     return res.status(400).json({
       error: 'ID inválido'
     });
   }
-  
+
   try {
     const query = 'DELETE FROM atos_tabela WHERE id = $1 RETURNING *';
     const result = await pool.query(query, [id]);
-    
+
     if (result.rowCount === 0) {
+      console.log('[atos-tabela][DELETE] Ato não encontrado para remoção.');
       return res.status(404).json({
         error: 'Ato não encontrado'
       });
     }
-    
-    console.log('[atos-tabela] Ato removido:', result.rows[0]);
-    
+
+    console.log('[atos-tabela][DELETE] Ato removido:', result.rows[0]);
+
     res.json({
       success: true,
       message: 'Ato removido com sucesso',
       ato: result.rows[0]
     });
-    
+
   } catch (error) {
-    console.error('[atos-tabela] Erro ao remover ato:', error);
+    console.error('[atos-tabela][DELETE] Erro ao remover ato:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
