@@ -34,10 +34,10 @@ const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
-const atosTabelaRouter = require('./routes/atos-tabela');
+//const atosTabelaRouter = require('./routes/atos-tabela');
 
 const atosPraticadosRouter = require('./routes/atosPraticados');
-app.use('/api/atos-praticados', atosPraticadosRouter);
+//app.use('/api/atos-praticados', atosPraticadosRouter);
 
 // Se precisar de autocomplete de atos:
 const atosRouter = require('./routes/atos');
