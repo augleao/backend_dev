@@ -264,7 +264,7 @@ module.exports = router;
 /*
 1. No seu arquivo principal (app.js ou server.js), adicione:
 
-const atosPraticados = require("./routes/atos-praticados"); // Ajuste o caminho
+const atosPraticados = require("./routes/rota_atos_praticados");
 app.use("/api/atos-tabela", atosPraticados);
 
 2. A tabela atos_praticados já existe conforme fornecido:
