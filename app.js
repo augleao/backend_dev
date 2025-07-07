@@ -36,8 +36,12 @@ const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
 
 
-const atosPraticadosRoutes = require('./routes/atosPraticados');
-app.use('/api/atos-praticados', atosPraticadosRoutes);
+const atosPraticadosRouter = require('./routes/atosPraticados');
+app.use('/api/atos-praticados', atosPraticadosRouter);
+
+// Se precisar de autocomplete de atos:
+const atosRouter = require('./routes/atos');
+app.use('/api/atos', atosRouter);
 
 
 app.use('/api/codigos-gratuitos', require('./routes/codigosGratuitos'));
