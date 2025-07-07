@@ -35,18 +35,15 @@ const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
 const atosTabelaRouter = require('./routes/atos-tabela');
+app.use('/api/atos-tabela', atosTabelaRouter);
 
 const atosPraticadosRouter = require('./routes/atosPraticados');
 app.use('/api/atos-praticados', atosPraticadosRouter);
 
-// Se precisar de autocomplete de atos:
-const atosRouter = require('./routes/atos');
-app.use('/api/atos', atosRouter);
-
-app.use('/api/atos-tabela', atosTabelaRouter);
-app.use('/api/codigos-gratuitos', require('./routes/codigosGratuitos'));
-
+const atosRoutes = require('./routes/atos');
 app.use('/api/atos', atosRoutes);
+
+app.use('/api/codigos-gratuitos', require('./routes/codigosGratuitos'));
 app.use('/api/caixa-diario', caixaDiarioRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
