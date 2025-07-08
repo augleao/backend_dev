@@ -656,8 +656,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         quantidade,
         valor_unitario,
         pagamentos,
-        detalhes_pagamentos,
-        created_at
+        detalhes_pagamentos
       FROM atos_praticados
     `;
     let params = [];
@@ -665,7 +664,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
       query += ' WHERE data = $1';
       params.push(data);
     }
-    query += ' ORDER BY data DESC, hora DESC, created_at DESC';
+    query += ' ORDER BY data DESC, hora DESC, id DESC'; // Remova created_at
 
     console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
 
@@ -1378,8 +1377,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         quantidade,
         valor_unitario,
         pagamentos,
-        detalhes_pagamentos,
-        created_at
+        detalhes_pagamentos
       FROM atos_praticados
     `;
     let params = [];
@@ -1387,7 +1385,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
       query += ' WHERE data = $1';
       params.push(data);
     }
-    query += ' ORDER BY data DESC, hora DESC, created_at DESC';
+    query += ' ORDER BY data DESC, hora DESC, id DESC'; // Remova created_at
 
     console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
 
