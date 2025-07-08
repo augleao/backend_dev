@@ -598,6 +598,24 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario
   });
 
+  const codigoTributacao = tributacao
+  ? String(tributacao).trim().substring(0, 2)
+  : null;
+
+  const params = [
+    data,
+    hora,
+    codigo,
+    codigoTributacao,
+    descricao,
+    quantidade || 1,
+    valor_unitario || 0,
+    typeof pagamentos === 'object'
+      ? JSON.stringify(pagamentos)
+      : JSON.stringify({ valor: pagamentos }),
+    detalhes_pagamentos || null
+  ];
+
   try {
     const result = await pool.query(
       `INSERT INTO atos_praticados
@@ -1324,6 +1342,24 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
   console.log('[POST] Campos recebidos:', {
     data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario
   });
+
+  const codigoTributacao = tributacao
+  ? String(tributacao).trim().substring(0, 2)
+  : null;
+
+  const params = [
+    data,
+    hora,
+    codigo,
+    codigoTributacao,
+    descricao,
+    quantidade || 1,
+    valor_unitario || 0,
+    typeof pagamentos === 'object'
+      ? JSON.stringify(pagamentos)
+      : JSON.stringify({ valor: pagamentos }),
+    detalhes_pagamentos || null
+  ];
 
   try {
     const result = await pool.query(
