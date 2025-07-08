@@ -720,8 +720,7 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
+        pagamentos
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
@@ -734,8 +733,7 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
-      detalhes_pagamentos || null
+      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos
     ];
 
     console.log('[atos-tabela][POST] Query INSERT:', query);
@@ -1375,8 +1373,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos,
-        detalhes_pagamentos,
+        pagamentos
         created_at
       FROM atos_praticados
     `;
@@ -1420,8 +1417,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     descricao,
     quantidade,
     valor_unitario,
-    pagamentos,
-    detalhes_pagamentos
+    pagamentos
   } = req.body;
 
   // Validações básicas
@@ -1442,9 +1438,8 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
 
@@ -1456,8 +1451,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
-      detalhes_pagamentos || null
+      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos
     ];
 
     console.log('[atos-tabela][POST] Query INSERT:', query);
