@@ -656,7 +656,6 @@ router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         quantidade,
         valor_unitario,
         pagamentos,
-        detalhes_pagamentos,
         created_at
       FROM atos_praticados
     `;
@@ -701,7 +700,6 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     quantidade,
     valor_unitario,
     pagamentos,
-    detalhes_pagamentos
   } = req.body;
 
   // Validações básicas
@@ -724,7 +722,7 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         valor_unitario,
         pagamentos,
         detalhes_pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
 
