@@ -713,7 +713,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO atos_tabela (
+      INSERT INTO atos_praticados (
         data,
         hora,
         codigo,
@@ -1434,7 +1434,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO atos_tabela (
+      INSERT INTO atos_praticados (
         data,
         hora,
         codigo,
