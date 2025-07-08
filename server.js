@@ -612,8 +612,11 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        JSON.stringify(pagamentos),
-        usuario
+        // Garante que pagamentos seja sempre um JSON válido
+        typeof pagamentos === 'object'
+          ? JSON.stringify(pagamentos)
+          : JSON.stringify({ valor: pagamentos }),
+        detalhes_pagamentos || null
       ]
     );
     console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
@@ -735,7 +738,10 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
+      // Garante que pagamentos seja sempre um JSON válido
+      typeof pagamentos === 'object'
+        ? JSON.stringify(pagamentos)
+        : JSON.stringify({ valor: pagamentos }),
       detalhes_pagamentos || null
     ];
 
@@ -1333,8 +1339,11 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        JSON.stringify(pagamentos),
-        usuario
+        // Garante que pagamentos seja sempre um JSON válido
+        typeof pagamentos === 'object'
+          ? JSON.stringify(pagamentos)
+          : JSON.stringify({ valor: pagamentos }),
+        detalhes_pagamentos || null
       ]
     );
     console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
@@ -1456,7 +1465,10 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
+      // Garante que pagamentos seja sempre um JSON válido
+      typeof pagamentos === 'object'
+        ? JSON.stringify(pagamentos)
+        : JSON.stringify({ valor: pagamentos }),
       detalhes_pagamentos || null
     ];
 
