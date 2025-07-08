@@ -606,7 +606,7 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     data,
     hora,
     codigo,
-    codigoTributacao,
+    codigoTributacao, // <-- aqui!
     descricao,
     quantidade || 1,
     valor_unitario || 0,
@@ -617,26 +617,23 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
   ];
 
   try {
-    const result = await pool.query(
-      `INSERT INTO atos_praticados
-      (data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
+    const query = `
+      INSERT INTO atos_praticados (
         data,
         hora,
         codigo,
-        tributacao || null,
+        tributacao,
         descricao,
         quantidade,
         valor_unitario,
-        // Garante que pagamentos seja sempre um JSON válido
-        typeof pagamentos === 'object'
-          ? JSON.stringify(pagamentos)
-          : JSON.stringify({ valor: pagamentos }),
-        detalhes_pagamentos || null
-      ]
-    );
+        pagamentos,
+        detalhes_pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, params);
+
     console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
     res.status(201).json({ ato: result.rows[0] });
   } catch (err) {
@@ -1351,7 +1348,7 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     data,
     hora,
     codigo,
-    codigoTributacao,
+    codigoTributacao, // <-- aqui!
     descricao,
     quantidade || 1,
     valor_unitario || 0,
@@ -1362,26 +1359,23 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
   ];
 
   try {
-    const result = await pool.query(
-      `INSERT INTO atos_praticados
-      (data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
+    const query = `
+      INSERT INTO atos_praticados (
         data,
         hora,
         codigo,
-        tributacao || null,
+        tributacao,
         descricao,
         quantidade,
         valor_unitario,
-        // Garante que pagamentos seja sempre um JSON válido
-        typeof pagamentos === 'object'
-          ? JSON.stringify(pagamentos)
-          : JSON.stringify({ valor: pagamentos }),
-        detalhes_pagamentos || null
-      ]
-    );
+        pagamentos,
+        detalhes_pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, params);
+
     console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
     res.status(201).json({ ato: result.rows[0] });
   } catch (err) {
