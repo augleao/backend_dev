@@ -658,7 +658,7 @@ router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         pagamentos,
         detalhes_pagamentos,
         created_at
-      FROM atos_tabela
+      FROM atos_praticados
     `;
     let params = [];
     if (data) {
@@ -1380,7 +1380,7 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         pagamentos,
         detalhes_pagamentos,
         created_at
-      FROM atos_tabela
+      FROM atos_praticados
     `;
     let params = [];
     if (data) {
