@@ -558,7 +558,7 @@ app.get('/api/atos/:id', authenticate, async (req, res) => {
 });
 
 // GET /api/atos-praticados?data=YYYY-MM-DD
-router.get('/api/atos-praticados', authenticate, async (req, res) => {
+app.get('/api/atos-praticados', authenticate, async (req, res) => {
   const { data } = req.query;
   console.log('[GET] /api/atos-praticados chamada com data:', data);
   try {
@@ -579,7 +579,7 @@ router.get('/api/atos-praticados', authenticate, async (req, res) => {
 });
 
 // POST /api/atos-praticados
-router.post('/api/atos-praticados', authenticate, async (req, res) => {
+app.post('/api/atos-praticados', authenticate, async (req, res) => {
   console.log('[POST] /api/atos-praticados - body recebido:', req.body);
   const {
     data,
@@ -625,7 +625,7 @@ router.post('/api/atos-praticados', authenticate, async (req, res) => {
 });
 
 // DELETE /api/s/:id
-router.delete('/api/s/:id', authenticate, async (req, res) => {
+app.delete('/api/s/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   console.log('[DELETE] /api/atos-praticados chamada para id:', id);
   try {
