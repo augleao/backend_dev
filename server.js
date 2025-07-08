@@ -656,6 +656,7 @@ router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         quantidade,
         valor_unitario,
         pagamentos,
+        detalhes_pagamentos,
         created_at
       FROM atos_praticados
     `;
@@ -700,6 +701,7 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     quantidade,
     valor_unitario,
     pagamentos,
+    detalhes_pagamentos
   } = req.body;
 
   // Validações básicas
@@ -720,8 +722,9 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        pagamentos,
+        detalhes_pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
 
@@ -733,7 +736,8 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos
+      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
+      detalhes_pagamentos || null
     ];
 
     console.log('[atos-tabela][POST] Query INSERT:', query);
@@ -771,7 +775,7 @@ router.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
   }
 
   try {
-    const query = 'DELETE FROM atos_tabela WHERE id = $1 RETURNING *';
+    const query = 'DELETE FROM atos_praticados WHERE id = $1 RETURNING *';
     const result = await pool.query(query, [id]);
 
     if (result.rowCount === 0) {
@@ -1346,7 +1350,7 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
 app.delete('/api/atos-praticados/:id', authenticate, async (req, res) => {
   const id = req.params.id;
   try {
-    const result = await pool.query(`DELETE FROM atos_pagos WHERE id = $1`, [id]);
+    const result = await pool.query(`DELETE FROM atos_praticados WHERE id = $1`, [id]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Ato não encontrado.' });
     }
@@ -1373,7 +1377,8 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos
+        pagamentos,
+        detalhes_pagamentos,
         created_at
       FROM atos_praticados
     `;
@@ -1417,7 +1422,8 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     descricao,
     quantidade,
     valor_unitario,
-    pagamentos
+    pagamentos,
+    detalhes_pagamentos
   } = req.body;
 
   // Validações básicas
@@ -1438,8 +1444,9 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        pagamentos,
+        detalhes_pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
 
@@ -1451,7 +1458,8 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos
+      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
+      detalhes_pagamentos || null
     ];
 
     console.log('[atos-tabela][POST] Query INSERT:', query);
@@ -1489,7 +1497,7 @@ app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
   }
 
   try {
-    const query = 'DELETE FROM atos_tabela WHERE id = $1 RETURNING *';
+    const query = 'DELETE FROM atos_praticados WHERE id = $1 RETURNING *';
     const result = await pool.query(query, [id]);
 
     if (result.rowCount === 0) {
