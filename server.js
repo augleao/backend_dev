@@ -606,7 +606,7 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     data,
     hora,
     codigo,
-    codigoTributacao, // <-- aqui!
+    codigoTributacao, // Use só o código aqui!
     descricao,
     quantidade || 1,
     valor_unitario || 0,
@@ -616,31 +616,27 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     detalhes_pagamentos || null
   ];
 
-  try {
-    const query = `
-      INSERT INTO atos_praticados (
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
+  const query = `
+    INSERT INTO atos_praticados (
+      data,
+      hora,
+      codigo,
+      tributacao,
+      descricao,
+      quantidade,
+      valor_unitario,
+      pagamentos,
+      detalhes_pagamentos
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *
+  `;
 
-    const result = await pool.query(query, params);
+  const result = await pool.query(query, params);
 
-    console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
-    res.status(201).json({ ato: result.rows[0] });
-  } catch (err) {
-    console.error('[POST] /api/atos-praticados - erro ao inserir:', err);
-    res.status(500).json({ error: 'Erro ao salvar ato praticado.', details: err.message });
-  }
+  console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
+  res.status(201).json({ ato: result.rows[0] });
 });
+
 
 // DELETE /api/s/:id
 app.delete('/api/s/:id', authenticate, async (req, res) => {
@@ -1348,7 +1344,7 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     data,
     hora,
     codigo,
-    codigoTributacao, // <-- aqui!
+    codigoTributacao, // Use só o código aqui!
     descricao,
     quantidade || 1,
     valor_unitario || 0,
@@ -1358,30 +1354,25 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
     detalhes_pagamentos || null
   ];
 
-  try {
-    const query = `
-      INSERT INTO atos_praticados (
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
+  const query = `
+    INSERT INTO atos_praticados (
+      data,
+      hora,
+      codigo,
+      tributacao,
+      descricao,
+      quantidade,
+      valor_unitario,
+      pagamentos,
+      detalhes_pagamentos
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *
+  `;
 
-    const result = await pool.query(query, params);
+  const result = await pool.query(query, params);
 
-    console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
-    res.status(201).json({ ato: result.rows[0] });
-  } catch (err) {
-    console.error('[POST] /api/atos-praticados - erro ao inserir:', err);
-    res.status(500).json({ error: 'Erro ao salvar ato praticado.', details: err.message });
-  }
+  console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
+  res.status(201).json({ ato: result.rows[0] });
 });
 
 // Deletar ato praticado
