@@ -640,7 +640,7 @@ router.delete('/api/s/:id', authenticate, async (req, res) => {
 
 
 // Buscar atos por data
-router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
+app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   const { data } = req.query;
   console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
 
@@ -689,7 +689,7 @@ router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
 });
 
 // POST /api/atos-tabela
-router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
+app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   console.log('[atos-tabela][POST] Body recebido:', req.body);
 
   const {
@@ -763,7 +763,7 @@ router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/atos-tabela/:id
-router.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
+app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
 
