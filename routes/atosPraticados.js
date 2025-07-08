@@ -4,7 +4,7 @@ const router = express.Router();
 const pool = require('../db'); // ajuste para seu pool/conexão
 
 // GET /api/atos-praticados?data=YYYY-MM-DD
-router.get('/api/atos-praticados', async (req, res) => {
+router.get('/api/atos-praticados', authenticate, async (req, res) => {
   const { data } = req.query;
   console.log('[GET] /api/atos-praticados chamada com data:', data);
   try {
@@ -25,7 +25,7 @@ router.get('/api/atos-praticados', async (req, res) => {
 });
 
 // POST /api/atos-praticados
-router.post('/api/atos-praticados', async (req, res) => {
+router.post('/api/atos-praticados', authenticate, async (req, res) => {
   console.log('[POST] /api/atos-praticados - body recebido:', req.body);
   const {
     data,
@@ -70,8 +70,8 @@ router.post('/api/atos-praticados', async (req, res) => {
   }
 });
 
-// DELETE /api/atos-praticados/:id
-router.delete('/api/atos-praticados/:id', async (req, res) => {
+// DELETE /api/s/:id
+router.delete('/api/s/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   console.log('[DELETE] /api/atos-praticados chamada para id:', id);
   try {
