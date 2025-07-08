@@ -557,6 +557,251 @@ app.get('/api/atos/:id', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/atos-praticados?data=YYYY-MM-DD
+router.get('/api/atos-praticados', authenticate, async (req, res) => {
+  const { data } = req.query;
+  console.log('[GET] /api/atos-praticados chamada com data:', data);
+  try {
+    let query = 'SELECT * FROM atos_praticados';
+    let params = [];
+    if (data) {
+      query += ' WHERE data = $1';
+      params.push(data);
+    }
+    query += ' ORDER BY hora ASC, id ASC';
+    const result = await pool.query(query, params);
+    console.log('[GET] /api/atos-praticados - retornando', result.rows.length, 'atos');
+    res.json({ atos: result.rows });
+  } catch (err) {
+    console.error('[GET] /api/atos-praticados - erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar atos praticados.' });
+  }
+});
+
+// POST /api/atos-praticados
+router.post('/api/atos-praticados', authenticate, async (req, res) => {
+  console.log('[POST] /api/atos-praticados - body recebido:', req.body);
+  const {
+    data,
+    hora,
+    codigo,
+    tributacao,
+    descricao,
+    quantidade,
+    valor_unitario,
+    pagamentos,
+    usuario
+  } = req.body;
+
+  // Log dos campos recebidos
+  console.log('[POST] Campos recebidos:', {
+    data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario
+  });
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO atos_praticados
+      (data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *`,
+      [
+        data,
+        hora,
+        codigo,
+        tributacao || null,
+        descricao,
+        quantidade,
+        valor_unitario,
+        JSON.stringify(pagamentos),
+        usuario
+      ]
+    );
+    console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
+    res.status(201).json({ ato: result.rows[0] });
+  } catch (err) {
+    console.error('[POST] /api/atos-praticados - erro ao inserir:', err);
+    res.status(500).json({ error: 'Erro ao salvar ato praticado.', details: err.message });
+  }
+});
+
+// DELETE /api/s/:id
+router.delete('/api/s/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  console.log('[DELETE] /api/atos-praticados chamada para id:', id);
+  try {
+    await pool.query('DELETE FROM atos_praticados WHERE id = $1', [id]);
+    console.log('[DELETE] /api/atos-praticados - removido id:', id);
+    res.status(204).send();
+  } catch (err) {
+    console.error('[DELETE] /api/atos-praticados - erro:', err);
+    res.status(500).json({ error: 'Erro ao remover ato praticado.' });
+  }
+});
+
+
+// Buscar atos por data
+router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
+  const { data } = req.query;
+  console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
+
+  try {
+    let query = `
+      SELECT 
+        id,
+        data,
+        hora,
+        codigo,
+        tributacao,
+        descricao,
+        quantidade,
+        valor_unitario,
+        pagamentos,
+        detalhes_pagamentos,
+        created_at
+      FROM atos_tabela
+    `;
+    let params = [];
+    if (data) {
+      query += ' WHERE data = $1';
+      params.push(data);
+    }
+    query += ' ORDER BY data DESC, hora DESC, created_at DESC';
+
+    console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
+
+    const result = await pool.query(query, params);
+
+    console.log('[atos-tabela][GET] Resultados encontrados:', result.rowCount);
+
+    res.json({
+      success: true,
+      atos: result.rows,
+      total: result.rowCount
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][GET] Erro ao buscar atos:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar atos'
+    });
+  }
+});
+
+// POST /api/atos-tabela
+router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
+  console.log('[atos-tabela][POST] Body recebido:', req.body);
+
+  const {
+    data,
+    hora,
+    codigo,
+    tributacao,
+    descricao,
+    quantidade,
+    valor_unitario,
+    pagamentos,
+    detalhes_pagamentos
+  } = req.body;
+
+  // Validações básicas
+  if (!data || !hora || !codigo || !descricao) {
+    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
+    return res.status(400).json({
+      error: 'Campos obrigatórios: data, hora, codigo, descricao'
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO atos_tabela (
+        data,
+        hora,
+        codigo,
+        tributacao,
+        descricao,
+        quantidade,
+        valor_unitario,
+        pagamentos,
+        detalhes_pagamentos
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const params = [
+      data,
+      hora,
+      codigo,
+      tributacao || null,
+      descricao,
+      quantidade || 1,
+      valor_unitario || 0,
+      typeof pagamentos === 'object' ? JSON.stringify(pagamentos) : pagamentos,
+      detalhes_pagamentos || null
+    ];
+
+    console.log('[atos-tabela][POST] Query INSERT:', query);
+    console.log('[atos-tabela][POST] Params:', params);
+
+    const result = await pool.query(query, params);
+
+    console.log('[atos-tabela][POST] Ato inserido com sucesso:', result.rows[0]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Ato adicionado com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][POST] Erro ao inserir ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
+    });
+  }
+});
+
+// DELETE /api/atos-tabela/:id
+router.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
+
+  if (!id || isNaN(id)) {
+    console.log('[atos-tabela][DELETE] ID inválido!');
+    return res.status(400).json({
+      error: 'ID inválido'
+    });
+  }
+
+  try {
+    const query = 'DELETE FROM atos_tabela WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      console.log('[atos-tabela][DELETE] Ato não encontrado para remoção.');
+      return res.status(404).json({
+        error: 'Ato não encontrado'
+      });
+    }
+
+    console.log('[atos-tabela][DELETE] Ato removido:', result.rows[0]);
+
+    res.json({
+      success: true,
+      message: 'Ato removido com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][DELETE] Erro ao remover ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
+    });
+  }
+});
+
 
 
 
