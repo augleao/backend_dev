@@ -4,7 +4,7 @@ const router = express.Router();
 const pool = require('../db'); // ajuste para seu pool/conexão
 
 // GET /api/atos-praticados?data=YYYY-MM-DD
-router.get('/', async (req, res) => {
+router.get('/atos-praticados', async (req, res) => {
   const { data } = req.query;
   console.log('[GET] /api/atos-praticados chamada com data:', data);
   try {
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/atos-praticados
-router.post('/', async (req, res) => {
+router.post('/atos-praticados', async (req, res) => {
   console.log('[POST] /api/atos-praticados - body recebido:', req.body);
   const {
     data,
