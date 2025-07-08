@@ -1262,3 +1262,19 @@ app.listen(port, () => {
 
 const codigosGratuitosRouter = require('./routes/codigosGratuitos');
 app.use('/api/codigos-gratuitos', codigosGratuitosRouter);
+
+// Middleware para autenticação de token
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Token de acesso requerido' });
+  }
+  // Se quiser validar o JWT, descomente abaixo:
+  // try {
+  //   req.user = jwt.verify(token, JWT_SECRET);
+  // } catch {
+  //   return res.status(401).json({ error: 'Token inválido' });
+  // }
+  next();
+}
