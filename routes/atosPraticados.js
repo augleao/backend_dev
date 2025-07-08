@@ -71,7 +71,7 @@ router.post('/api/atos-praticados', async (req, res) => {
 });
 
 // DELETE /api/atos-praticados/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/api/atos-praticados/:id', async (req, res) => {
   const { id } = req.params;
   console.log('[DELETE] /api/atos-praticados chamada para id:', id);
   try {

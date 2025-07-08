@@ -20,7 +20,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Buscar atos por data
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   const { data } = req.query;
   console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
 
@@ -69,7 +69,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // POST /api/atos-tabela
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   console.log('[atos-tabela][POST] Body recebido:', req.body);
 
   const {
@@ -143,7 +143,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/atos-tabela/:id
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
 
