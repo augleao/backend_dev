@@ -625,10 +625,9 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
       descricao,
       quantidade,
       valor_unitario,
-      pagamentos,
       detalhes_pagamentos,
       usuario
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
 
@@ -670,7 +669,6 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos,
         detalhes_pagamentos,
         usuario
       FROM atos_praticados
@@ -1365,8 +1363,8 @@ app.post('/api/atos-praticados', authenticate, async (req, res) => {
       descricao,
       quantidade,
       valor_unitario,
-      pagamentos,
-      detalhes_pagamentos
+      detalhes_pagamentos,
+      usuario
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
@@ -1474,8 +1472,8 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
         descricao,
         quantidade,
         valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
+        detalhes_pagamentos,
+        usuario
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
