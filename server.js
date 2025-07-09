@@ -653,7 +653,9 @@ app.delete('/api/s/:id', authenticate, async (req, res) => {
 });
 
 
-// Buscar atos por data
+// ========== ROTAS DE ATOS PRATICADOS (VERSÃO CORRIGIDA) ==========
+
+// GET /api/atos-tabela - Buscar atos por data
 app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   const { data } = req.query;
   console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
@@ -661,24 +663,28 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   try {
     let query = `
       SELECT 
-        id,
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        detalhes_pagamentos,
-        usuario
-      FROM atos_praticados
+        ap.id,
+        ap.data,
+        ap.hora,
+        ap.codigo,
+        ap.tributacao,
+        cg.descricao as tributacao_descricao,
+        ap.descricao,
+        ap.quantidade,
+        ap.valor_unitario,
+        ap.pagamentos,
+        ap.detalhes_pagamentos,
+        ap.usuario
+      FROM atos_praticados ap
+      LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
     `;
+    
     let params = [];
     if (data) {
-      query += ' WHERE data = $1';
+      query += ' WHERE ap.data = $1';
       params.push(data);
     }
-    query += ' ORDER BY data DESC, hora DESC, id DESC'; // Remova created_at
+    query += ' ORDER BY ap.data DESC, ap.hora DESC, ap.id DESC';
 
     console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
 
@@ -686,9 +692,25 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
 
     console.log('[atos-tabela][GET] Resultados encontrados:', result.rowCount);
 
+    // Formatar os dados para o frontend
+    const atosFormatados = result.rows.map((ato) => ({
+      id: ato.id,
+      data: ato.data,
+      hora: ato.hora,
+      codigo: ato.codigo,
+      tributacao: ato.tributacao,
+      tributacao_descricao: ato.tributacao_descricao,
+      descricao: ato.descricao,
+      quantidade: ato.quantidade,
+      valor_unitario: parseFloat(ato.valor_unitario),
+      pagamentos: ato.pagamentos, // já é JSON (jsonb)
+      detalhes_pagamentos: ato.detalhes_pagamentos, // já é JSON (jsonb)
+      usuario: ato.usuario,
+    }));
+
     res.json({
       success: true,
-      atos: result.rows,
+      atos: atosFormatados,
       total: result.rowCount
     });
 
@@ -701,61 +723,84 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/atos-tabela
+// POST /api/atos-tabela - Adicionar novo ato
 app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   console.log('[atos-tabela][POST] Body recebido:', req.body);
 
-const {
-  data,
-  hora,
-  codigo,
-  tributacao,
-  descricao,
-  quantidade,
-  valor_unitario,
-  pagamentos,
-  usuario,
-  detalhes_pagamentos
-} = req.body;
-
-  // Validações básicas
-  if (!data || !hora || !codigo || !descricao) {
-    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
-    return res.status(400).json({
-      error: 'Campos obrigatórios: data, hora, codigo, descricao'
-    });
-  }
-
-  try {
-    const query = `
-  INSERT INTO atos_praticados (
+  const {
     data,
     hora,
     codigo,
-    tributacao,
+    tributacao_codigo, // Código da tributação (ex: "01")
     descricao,
     quantidade,
     valor_unitario,
     pagamentos,
-    usuario,
-    detalhes_pagamentos
-  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-  RETURNING *
+    detalhes_pagamentos,
+    usuario
+  } = req.body;
+
+  // Validações básicas
+  if (!data || !hora || !codigo || !descricao || !usuario) {
+    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
+    return res.status(400).json({
+      error: 'Campos obrigatórios: data, hora, codigo, descricao, usuario'
+    });
+  }
+
+  if (!tributacao_codigo) {
+    return res.status(400).json({
+      error: 'Campo obrigatório: tributacao_codigo'
+    });
+  }
+
+  try {
+    // Verificar se o código do ato existe na tabela atos
+    const atoExiste = await pool.query('SELECT codigo FROM atos WHERE codigo = $1', [codigo]);
+    if (atoExiste.rowCount === 0) {
+      return res.status(400).json({
+        error: `Código de ato '${codigo}' não encontrado na tabela atos`
+      });
+    }
+
+    // Verificar se o código de tributação existe na tabela codigos_gratuitos
+    const tributacaoExiste = await pool.query(
+      'SELECT codigo FROM codigos_gratuitos WHERE codigo = $1',
+      [tributacao_codigo]
+    );
+    if (tributacaoExiste.rowCount === 0) {
+      return res.status(400).json({
+        error: `Código de tributação '${tributacao_codigo}' não encontrado na tabela codigos_gratuitos`
+      });
+    }
+
+    const query = `
+      INSERT INTO atos_praticados (
+        data,
+        hora,
+        codigo,
+        tributacao,
+        descricao,
+        quantidade,
+        valor_unitario,
+        pagamentos,
+        detalhes_pagamentos,
+        usuario
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
     `;
 
     const params = [
       data,
       hora,
       codigo,
-      tributacao || null,
+      tributacao_codigo, // Salvar apenas o código na coluna tributacao
       descricao,
       quantidade || 1,
       valor_unitario || 0,
-      // Garante que pagamentos seja sempre um JSON válido
-      typeof pagamentos === 'object'
-        ? JSON.stringify(pagamentos)
-        : JSON.stringify({ valor: pagamentos }),
-      detalhes_pagamentos || null
+      JSON.stringify(pagamentos || {}), // Sempre converter para JSON string
+      JSON.stringify(detalhes_pagamentos || {}), // Sempre converter para JSON string
+      usuario
     ];
 
     console.log('[atos-tabela][POST] Query INSERT:', query);
@@ -768,11 +813,28 @@ const {
     res.status(201).json({
       success: true,
       message: 'Ato adicionado com sucesso',
-      ato: result.rows[0]
+      ato: {
+        ...result.rows[0],
+        valor_unitario: parseFloat(result.rows[0].valor_unitario),
+      }
     });
 
   } catch (error) {
     console.error('[atos-tabela][POST] Erro ao inserir ato:', error);
+
+    // Tratar erros específicos de chave estrangeira
+    if (error.code === '23503') {
+      if (error.constraint === 'fk_ato') {
+        return res.status(400).json({
+          error: `Código de ato '${codigo}' não é válido`
+        });
+      } else if (error.constraint === 'fk_tributacao') {
+        return res.status(400).json({
+          error: `Código de tributação '${tributacao_codigo}' não é válido`
+        });
+      }
+    }
+
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
@@ -780,7 +842,7 @@ const {
   }
 });
 
-// DELETE /api/atos-tabela/:id
+// DELETE /api/atos-tabela/:id - Remover ato por ID
 app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
@@ -808,7 +870,10 @@ app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Ato removido com sucesso',
-      ato: result.rows[0]
+      ato: {
+        ...result.rows[0],
+        valor_unitario: parseFloat(result.rows[0].valor_unitario),
+      }
     });
 
   } catch (error) {
