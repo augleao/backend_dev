@@ -705,17 +705,18 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
 app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   console.log('[atos-tabela][POST] Body recebido:', req.body);
 
-  const {
-    data,
-    hora,
-    codigo,
-    tributacao,
-    descricao,
-    quantidade,
-    valor_unitario,
-    pagamentos,
-    detalhes_pagamentos,
-  } = req.body;
+const {
+  data,
+  hora,
+  codigo,
+  tributacao,
+  descricao,
+  quantidade,
+  valor_unitario,
+  pagamentos,
+  usuario,
+  detalhes_pagamentos
+} = req.body;
 
   // Validações básicas
   if (!data || !hora || !codigo || !descricao) {
@@ -727,18 +728,19 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO atos_praticados (
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        detalhes_pagamentos,
-        usuario
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
+  INSERT INTO atos_praticados (
+    data,
+    hora,
+    codigo,
+    tributacao,
+    descricao,
+    quantidade,
+    valor_unitario,
+    pagamentos,
+    usuario,
+    detalhes_pagamentos
+  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  RETURNING *
     `;
 
     const params = [
