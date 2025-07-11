@@ -1521,6 +1521,139 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     detalhes_pagamentos
   } = req.body;
 
+// ========== ROTAS DE PESQUISA DE ATOS PRATICADOS ==========
+
+// GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
+app.get('/api/atos-tabela/pesquisa', authenticateToken, async (req, res) => {
+  const { dataInicial, dataFinal, usuario, codigo, tributacao } = req.query;
+  console.log('[atos-tabela][PESQUISA] Parâmetros recebidos:', req.query);
+
+  try {
+    let query = `
+      SELECT 
+        ap.id,
+        ap.data,
+        ap.hora,
+        ap.codigo,
+        ap.tributacao,
+        cg.descricao as tributacao_descricao,
+        ap.descricao,
+        ap.quantidade,
+        ap.valor_unitario,
+        ap.pagamentos,
+        ap.detalhes_pagamentos,
+        ap.usuario
+      FROM atos_praticados ap
+      LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+
+    // Filtro por período de datas
+    if (dataInicial) {
+      paramCount++;
+      query += ` AND ap.data >= $${paramCount}`;
+      params.push(dataInicial);
+    }
+    
+    if (dataFinal) {
+      paramCount++;
+      query += ` AND ap.data <= $${paramCount}`;
+      params.push(dataFinal);
+    }
+
+    // Filtro por usuário (escrevente)
+    if (usuario) {
+      paramCount++;
+      query += ` AND ap.usuario ILIKE $${paramCount}`;
+      params.push(`%${usuario}%`);
+    }
+
+    // Filtro por código do ato
+    if (codigo) {
+      paramCount++;
+      query += ` AND ap.codigo ILIKE $${paramCount}`;
+      params.push(`%${codigo}%`);
+    }
+
+    // Filtro por tributação
+    if (tributacao) {
+      paramCount++;
+      query += ` AND ap.tributacao ILIKE $${paramCount}`;
+      params.push(`%${tributacao}%`);
+    }
+
+    // Ordenação
+    query += ` ORDER BY ap.data DESC, ap.hora DESC`;
+
+    console.log('[atos-tabela][PESQUISA] Query:', query);
+    console.log('[atos-tabela][PESQUISA] Params:', params);
+
+    const result = await pool.query(query, params);
+    
+    console.log('[atos-tabela][PESQUISA] Resultados encontrados:', result.rowCount);
+
+    res.json({
+      atos: result.rows,
+      total: result.rowCount
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][PESQUISA] Erro:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/atos-tabela/usuarios - Buscar usuários únicos para sugestões
+app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
+  const { search } = req.query;
+  console.log('[atos-tabela][USUARIOS] Termo de busca:', search);
+
+  try {
+    let query = `
+      SELECT DISTINCT usuario 
+      FROM atos_praticados 
+      WHERE usuario IS NOT NULL
+    `;
+    
+    const params = [];
+    
+    if (search) {
+      query += ` AND usuario ILIKE $1`;
+      params.push(`%${search}%`);
+    }
+    
+    query += ` ORDER BY usuario LIMIT 10`;
+
+    console.log('[atos-tabela][USUARIOS] Query:', query);
+    console.log('[atos-tabela][USUARIOS] Params:', params);
+
+    const result = await pool.query(query, params);
+    
+    const usuarios = result.rows.map(row => row.usuario);
+    
+    console.log('[atos-tabela][USUARIOS] Usuários encontrados:', usuarios.length);
+
+    res.json({
+      usuarios: usuarios
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][USUARIOS] Erro:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+
+
+
   // Validações básicas
   if (!data || !hora || !codigo || !descricao) {
     console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
