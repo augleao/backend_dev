@@ -1524,9 +1524,9 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 // ========== ROTAS DE PESQUISA DE ATOS PRATICADOS ==========
 
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
-app.get('/api/atos-tabela/pesquisa', authenticateToken, async (req, res) => {
+app.get('/api/busca-atos/pesquisa', authenticateToken, async (req, res) => {
   const { dataInicial, dataFinal, usuario, codigo, tributacao } = req.query;
-  console.log('[atos-tabela][PESQUISA] Parâmetros recebidos:', req.query);
+  console.log('[busca-atos][PESQUISA] Parâmetros recebidos:', req.query);
 
   try {
     let query = `
@@ -1588,12 +1588,12 @@ app.get('/api/atos-tabela/pesquisa', authenticateToken, async (req, res) => {
     // Ordenação
     query += ` ORDER BY ap.data DESC, ap.hora DESC`;
 
-    console.log('[atos-tabela][PESQUISA] Query:', query);
-    console.log('[atos-tabela][PESQUISA] Params:', params);
+    console.log('[busca-atos][PESQUISA] Query:', query);
+    console.log('[busca-atos][PESQUISA] Params:', params);
 
     const result = await pool.query(query, params);
-    
-    console.log('[atos-tabela][PESQUISA] Resultados encontrados:', result.rowCount);
+
+    console.log('[busca-atos][PESQUISA] Resultados encontrados:', result.rowCount);
 
     res.json({
       atos: result.rows,
@@ -1601,7 +1601,7 @@ app.get('/api/atos-tabela/pesquisa', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[atos-tabela][PESQUISA] Erro:', error);
+    console.error('[busca-atos][PESQUISA] Erro:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: error.message
@@ -1610,9 +1610,9 @@ app.get('/api/atos-tabela/pesquisa', authenticateToken, async (req, res) => {
 });
 
 // GET /api/atos-tabela/usuarios - Buscar usuários únicos para sugestões
-app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
+app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
   const { search } = req.query;
-  console.log('[atos-tabela][USUARIOS] Termo de busca:', search);
+  console.log('[busca-atos][USUARIOS] Termo de busca:', search);
 
   try {
     let query = `
@@ -1630,21 +1630,21 @@ app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
     
     query += ` ORDER BY usuario LIMIT 10`;
 
-    console.log('[atos-tabela][USUARIOS] Query:', query);
-    console.log('[atos-tabela][USUARIOS] Params:', params);
+    console.log('[busca-atos][USUARIOS] Query:', query);
+    console.log('[busca-atos][USUARIOS] Params:', params);
 
     const result = await pool.query(query, params);
     
     const usuarios = result.rows.map(row => row.usuario);
-    
-    console.log('[atos-tabela][USUARIOS] Usuários encontrados:', usuarios.length);
+
+    console.log('[busca-atos][USUARIOS] Usuários encontrados:', usuarios.length);
 
     res.json({
       usuarios: usuarios
     });
 
   } catch (error) {
-    console.error('[atos-tabela][USUARIOS] Erro:', error);
+    console.error('[busca-atos][USUARIOS] Erro:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: error.message
@@ -1656,7 +1656,7 @@ app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
 
   // Validações básicas
   if (!data || !hora || !codigo || !descricao) {
-    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
+    console.log('[busca-atos][POST] Campos obrigatórios faltando!');
     return res.status(400).json({
       error: 'Campos obrigatórios: data, hora, codigo, descricao'
     });
@@ -1693,12 +1693,12 @@ app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
       detalhes_pagamentos || null
     ];
 
-    console.log('[atos-tabela][POST] Query INSERT:', query);
-    console.log('[atos-tabela][POST] Params:', params);
+    console.log('[busca-atos][POST] Query INSERT:', query);
+    console.log('[busca-atos][POST] Params:', params);
 
     const result = await pool.query(query, params);
 
-    console.log('[atos-tabela][POST] Ato inserido com sucesso:', result.rows[0]);
+    console.log('[busca-atos][POST] Ato inserido com sucesso:', result.rows[0]);
 
     res.status(201).json({
       success: true,
@@ -1707,7 +1707,7 @@ app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[atos-tabela][POST] Erro ao inserir ato:', error);
+    console.error('[busca-atos][POST] Erro ao inserir ato:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
@@ -1716,12 +1716,12 @@ app.get('/api/atos-tabela/usuarios', authenticateToken, async (req, res) => {
 });
 
 // Deletar ato da tabela
-app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
+app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  console.log('[atos-tabela][DELETE] Requisição para remover ID:', id);
+  console.log('[busca-atos][DELETE] Requisição para remover ID:', id);
 
   if (!id || isNaN(id)) {
-    console.log('[atos-tabela][DELETE] ID inválido!');
+    console.log('[busca-atos][DELETE] ID inválido!');
     return res.status(400).json({
       error: 'ID inválido'
     });
@@ -1732,13 +1732,13 @@ app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
     const result = await pool.query(query, [id]);
 
     if (result.rowCount === 0) {
-      console.log('[atos-tabela][DELETE] Ato não encontrado para remoção.');
+      console.log('[busca-atos][DELETE] Ato não encontrado para remoção.');
       return res.status(404).json({
         error: 'Ato não encontrado'
       });
     }
 
-    console.log('[atos-tabela][DELETE] Ato removido:', result.rows[0]);
+    console.log('[busca-atos][DELETE] Ato removido:', result.rows[0]);
 
     res.json({
       success: true,
@@ -1747,7 +1747,7 @@ app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[atos-tabela][DELETE] Erro ao remover ato:', error);
+    console.error('[busca-atos][DELETE] Erro ao remover ato:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
