@@ -448,21 +448,12 @@ app.get('/api/atos', authenticate, async (req, res) => {
   }
 });
 
-//rotas para criar, deletar e listar atos por data 
-
-
-
-
 
 // Middleware de autenticação (exemplo)
 function authenticate(req, res, next) {
   // Sua lógica de autenticação aqui
   next();
 }
-
-// Exemplo de conexão com PostgreSQL usando 'pg'
-
-
 
 
 // Rota para buscar atos pagos por data e usuário
@@ -884,15 +875,6 @@ app.delete('/api/atos-tabela/:id', authenticateToken, async (req, res) => {
     });
   }
 });
-
-
-
-
-
-
-module.exports = router;
-
-
 
 //rota para atualizar um ato existente do tj
 
@@ -1521,107 +1503,6 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     detalhes_pagamentos
   } = req.body;
 
-  // Validações básicas
-  if (!data || !hora || !codigo || !descricao) {
-    console.log('[atos-tabela][POST] Campos obrigatórios faltando!');
-    return res.status(400).json({
-      error: 'Campos obrigatórios: data, hora, codigo, descricao'
-    });
-  }
-
-  try {
-    const query = `
-      INSERT INTO atos_praticados (
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        detalhes_pagamentos,
-        usuario
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
-
-    const params = [
-      data,
-      hora,
-      codigo,
-      tributacao || null,
-      descricao,
-      quantidade || 1,
-      valor_unitario || 0,
-      // Garante que pagamentos seja sempre um JSON válido
-      typeof pagamentos === 'object'
-        ? JSON.stringify(pagamentos)
-        : JSON.stringify({ valor: pagamentos }),
-      detalhes_pagamentos || null
-    ];
-
-    console.log('[atos-tabela][POST] Query INSERT:', query);
-    console.log('[atos-tabela][POST] Params:', params);
-
-    const result = await pool.query(query, params);
-
-    console.log('[atos-tabela][POST] Ato inserido com sucesso:', result.rows[0]);
-
-    res.status(201).json({
-      success: true,
-      message: 'Ato adicionado com sucesso',
-      ato: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('[atos-tabela][POST] Erro ao inserir ato:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
-    });
-  }
-});
-
-// Deletar ato da tabela
-app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  console.log('[busca-atos][DELETE] Requisição para remover ID:', id);
-
-  if (!id || isNaN(id)) {
-    console.log('[busca-atos][DELETE] ID inválido!');
-    return res.status(400).json({
-      error: 'ID inválido'
-    });
-  }
-
-  try {
-    const query = 'DELETE FROM atos_praticados WHERE id = $1 RETURNING *';
-    const result = await pool.query(query, [id]);
-
-    if (result.rowCount === 0) {
-      console.log('[busca-atos][DELETE] Ato não encontrado para remoção.');
-      return res.status(404).json({
-        error: 'Ato não encontrado'
-      });
-    }
-
-    console.log('[busca-atos][DELETE] Ato removido:', result.rows[0]);
-
-    res.json({
-      success: true,
-      message: 'Ato removido com sucesso',
-      ato: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('[busca-atos][DELETE] Erro ao remover ato:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
-    });
-  }
-});
-
 // ========== ROTAS DE PESQUISA DE ATOS PRATICADOS ==========
 
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
@@ -1812,6 +1693,46 @@ app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
     res.status(500).json({
       error: 'Erro interno do servidor',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
+    });
+  }
+});
+
+// Deletar ato da tabela
+app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  console.log('[busca-atos][DELETE] Requisição para remover ID:', id);
+
+  if (!id || isNaN(id)) {
+    console.log('[busca-atos][DELETE] ID inválido!');
+    return res.status(400).json({
+      error: 'ID inválido'
+    });
+  }
+
+  try {
+    const query = 'DELETE FROM atos_praticados WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      console.log('[busca-atos][DELETE] Ato não encontrado para remoção.');
+      return res.status(404).json({
+        error: 'Ato não encontrado'
+      });
+    }
+
+    console.log('[busca-atos][DELETE] Ato removido:', result.rows[0]);
+
+    res.json({
+      success: true,
+      message: 'Ato removido com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[busca-atos][DELETE] Erro ao remover ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
     });
   }
 });
