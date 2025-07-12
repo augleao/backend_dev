@@ -1505,6 +1505,70 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
 
 // ========== ROTAS DE PESQUISA DE ATOS PRATICADOS ==========
 
+
+
+  // Validações básicas
+  if (!data || !hora || !codigo || !descricao) {
+    console.log('[busca-atos][POST] Campos obrigatórios faltando!');
+    return res.status(400).json({
+      error: 'Campos obrigatórios: data, hora, codigo, descricao'
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO atos_praticados (
+        data,
+        hora,
+        codigo,
+        tributacao,
+        descricao,
+        quantidade,
+        valor_unitario,
+        detalhes_pagamentos,
+        usuario
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const params = [
+      data,
+      hora,
+      codigo,
+      tributacao || null,
+      descricao,
+      quantidade || 1,
+      valor_unitario || 0,
+      // Garante que pagamentos seja sempre um JSON válido
+      typeof pagamentos === 'object'
+        ? JSON.stringify(pagamentos)
+        : JSON.stringify({ valor: pagamentos }),
+      detalhes_pagamentos || null
+    ];
+
+    console.log('[busca-atos][POST] Query INSERT:', query);
+    console.log('[busca-atos][POST] Params:', params);
+
+    const result = await pool.query(query, params);
+
+    console.log('[busca-atos][POST] Ato inserido com sucesso:', result.rows[0]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Ato adicionado com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[busca-atos][POST] Erro ao inserir ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
+    });
+  }
+});
+
+
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
 app.get('/api/busca-atos/pesquisa', authenticateToken, async (req, res) => {
   const { dataInicial, dataFinal, usuario, codigo, tributacao } = req.query;
@@ -1633,70 +1697,6 @@ app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
     });
   }
 });
-
-
-
-  // Validações básicas
-  if (!data || !hora || !codigo || !descricao) {
-    console.log('[busca-atos][POST] Campos obrigatórios faltando!');
-    return res.status(400).json({
-      error: 'Campos obrigatórios: data, hora, codigo, descricao'
-    });
-  }
-
-  try {
-    const query = `
-      INSERT INTO atos_praticados (
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        detalhes_pagamentos,
-        usuario
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
-
-    const params = [
-      data,
-      hora,
-      codigo,
-      tributacao || null,
-      descricao,
-      quantidade || 1,
-      valor_unitario || 0,
-      // Garante que pagamentos seja sempre um JSON válido
-      typeof pagamentos === 'object'
-        ? JSON.stringify(pagamentos)
-        : JSON.stringify({ valor: pagamentos }),
-      detalhes_pagamentos || null
-    ];
-
-    console.log('[busca-atos][POST] Query INSERT:', query);
-    console.log('[busca-atos][POST] Params:', params);
-
-    const result = await pool.query(query, params);
-
-    console.log('[busca-atos][POST] Ato inserido com sucesso:', result.rows[0]);
-
-    res.status(201).json({
-      success: true,
-      message: 'Ato adicionado com sucesso',
-      ato: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('[busca-atos][POST] Erro ao inserir ato:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
-    });
-  }
-});
-
 // Deletar ato da tabela
 app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
