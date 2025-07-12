@@ -1736,3 +1736,5 @@ app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
     });
   }
 });
+
+module.exports = router;
