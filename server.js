@@ -1180,6 +1180,17 @@ app.get('/api/meus-relatorios', authenticate, async (req, res) => {
   }
 });
 
+// rota para buscar usuários (protegida)
+const authenticateToken = require('./middlewares/authenticateToken');
+app.get('/api/users', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, nome, email FROM public.users ORDER BY nome');
+    res.json({ usuarios: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+});
+
 // Rota para excluir relatório (protegida)
 app.delete('/api/excluir-relatorio/:id', authenticate, async (req, res) => {
   const { id } = req.params;
