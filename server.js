@@ -1181,7 +1181,6 @@ app.get('/api/meus-relatorios', authenticate, async (req, res) => {
 });
 
 // rota para buscar usuários (protegida)
-const authenticateToken = require('./middlewares/authenticateToken');
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nome, email FROM public.users ORDER BY nome');
