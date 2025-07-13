@@ -1183,7 +1183,7 @@ app.get('/api/meus-relatorios', authenticate, async (req, res) => {
 // rota para buscar usuários (protegida)
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, nome, email FROM public.users ORDER BY nome');
+    const result = await pool.query('SELECT id, nome, email, serventia FROM public.users ORDER BY nome');
     res.json({ usuarios: result.rows });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar usuários' });
@@ -1476,7 +1476,8 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
     }
     query += ' ORDER BY data DESC, hora DESC, id DESC'; // Remova created_at
 
-    console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
+    console.log('[atos-tabela][GET] Query:', query);
+    console.log('[atos-tabela][GET] Params:', params);
 
     const result = await pool.query(query, params);
 
