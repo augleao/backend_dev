@@ -699,8 +699,11 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
       pagamentos: ato.pagamentos,
       detalhes_pagamentos: ato.detalhes_pagamentos,
       usuario: ato.usuario,
-      usuario_serventia: ato.usuario_serventia // <-- novo campo retornado
+      usuario_serventia: ato.usuario_serventia
     }));
+
+    // LOG DO QUE SERÁ ENVIADO AO FRONTEND
+    console.log('[atos-tabela][GET] Enviando ao frontend:', JSON.stringify(atosFormatados, null, 2));
 
     res.json({
       success: true,
@@ -1453,7 +1456,7 @@ app.delete('/api/atos-praticados/:id', authenticate, async (req, res) => {
 });
 
 // Buscar atos da tabela por data
-app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
+app.get('/', authenticateToken, async (req, res) => {
   const { data } = req.query;
   console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
 
@@ -1505,8 +1508,11 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
       pagamentos: ato.pagamentos,
       detalhes_pagamentos: ato.detalhes_pagamentos,
       usuario: ato.usuario,
-      usuario_serventia: ato.usuario_serventia // <-- novo campo retornado
+      usuario_serventia: ato.usuario_serventia
     }));
+
+    // LOG DO QUE SERÁ ENVIADO AO FRONTEND
+    console.log('[atos-tabela][GET] Enviando ao frontend:', JSON.stringify(atosFormatados, null, 2));
 
     res.json({
       success: true,
