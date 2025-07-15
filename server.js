@@ -665,9 +665,11 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
         ap.valor_unitario,
         ap.pagamentos,
         ap.detalhes_pagamentos,
-        ap.usuario
+        ap.usuario,
+        u.serventia as usuario_serventia
       FROM atos_praticados ap
       LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
+      LEFT JOIN public.users u ON ap.usuario = u.nome
     `;
     
     let params = [];
@@ -694,9 +696,10 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
       descricao: ato.descricao,
       quantidade: ato.quantidade,
       valor_unitario: parseFloat(ato.valor_unitario),
-      pagamentos: ato.pagamentos, // já é JSON (jsonb)
-      detalhes_pagamentos: ato.detalhes_pagamentos, // já é JSON (jsonb)
+      pagamentos: ato.pagamentos,
+      detalhes_pagamentos: ato.detalhes_pagamentos,
       usuario: ato.usuario,
+      usuario_serventia: ato.usuario_serventia // <-- novo campo retornado
     }));
 
     res.json({
