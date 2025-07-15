@@ -1460,35 +1460,57 @@ app.get('/api/atos-tabela', authenticateToken, async (req, res) => {
   try {
     let query = `
       SELECT 
-        id,
-        data,
-        hora,
-        codigo,
-        tributacao,
-        descricao,
-        quantidade,
-        valor_unitario,
-        pagamentos,
-        detalhes_pagamentos
-      FROM atos_praticados
+        ap.id,
+        ap.data,
+        ap.hora,
+        ap.codigo,
+        ap.tributacao,
+        cg.descricao as tributacao_descricao,
+        ap.descricao,
+        ap.quantidade,
+        ap.valor_unitario,
+        ap.pagamentos,
+        ap.detalhes_pagamentos,
+        ap.usuario,
+        u.serventia as usuario_serventia
+      FROM atos_praticados ap
+      LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
+      LEFT JOIN public.users u ON ap.usuario = u.nome
     `;
+    
     let params = [];
     if (data) {
-      query += ' WHERE data = $1';
+      query += ' WHERE ap.data = $1';
       params.push(data);
     }
-    query += ' ORDER BY data DESC, hora DESC, id DESC'; // Remova created_at
+    query += ' ORDER BY ap.data DESC, ap.hora DESC, ap.id DESC';
 
-    console.log('[atos-tabela][GET] Query:', query);
-    console.log('[atos-tabela][GET] Params:', params);
+    console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
 
     const result = await pool.query(query, params);
 
     console.log('[atos-tabela][GET] Resultados encontrados:', result.rowCount);
 
+    // Formatar os dados para o frontend
+    const atosFormatados = result.rows.map((ato) => ({
+      id: ato.id,
+      data: ato.data,
+      hora: ato.hora,
+      codigo: ato.codigo,
+      tributacao: ato.tributacao,
+      tributacao_descricao: ato.tributacao_descricao,
+      descricao: ato.descricao,
+      quantidade: ato.quantidade,
+      valor_unitario: parseFloat(ato.valor_unitario),
+      pagamentos: ato.pagamentos,
+      detalhes_pagamentos: ato.detalhes_pagamentos,
+      usuario: ato.usuario,
+      usuario_serventia: ato.usuario_serventia // <-- novo campo retornado
+    }));
+
     res.json({
       success: true,
-      atos: result.rows,
+      atos: atosFormatados,
       total: result.rowCount
     });
 
@@ -1516,10 +1538,6 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
     pagamentos,
     detalhes_pagamentos
   } = req.body;
-
-// ========== ROTAS DE PESQUISA DE ATOS PRATICADOS ==========
-
-
 
   // Validações básicas
   if (!data || !hora || !codigo || !descricao) {
