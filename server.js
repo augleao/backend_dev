@@ -1808,4 +1808,34 @@ app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/admin/combos', async (req, res) => {
+  const { nome, atos } = req.body;
+  if (!nome || !Array.isArray(atos)) {
+    return res.status(400).json({ error: 'Nome e atos são obrigatórios.' });
+  }
+
+  try {
+    // Insere combo
+    const comboResult = await pool.query(
+      'INSERT INTO combos (nome) VALUES ($1) RETURNING id',
+      [nome]
+    );
+    const comboId = comboResult.rows[0].id;
+
+    // Insere relação combo-atos
+    for (const atoId of atos) {
+      await pool.query(
+        'INSERT INTO combo_atos (combo_id, ato_id) VALUES ($1, $2)',
+        [comboId, atoId]
+      );
+    }
+
+    res.status(201).json({ success: true, comboId });
+  } catch (err) {
+    console.error('Erro ao criar combo:', err);
+    res.status(500).json({ error: 'Erro ao criar combo.' });
+  }
+});
+
+
 module.exports = router;
