@@ -1610,7 +1610,7 @@ app.get('/api/admin/combos/listar', async (req, res) => {
   try {
     const combos = await pool.query(`
       SELECT c.id, c.nome, 
-        COALESCE(json_agg(json_build_object('id', a.id, 'nome', a.nome)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
       FROM combos c
       LEFT JOIN combo_atos ca ON ca.combo_id = c.id
       LEFT JOIN atos a ON ca.ato_id = a.id
@@ -1619,7 +1619,7 @@ app.get('/api/admin/combos/listar', async (req, res) => {
     `);
     res.json({ combos: combos.rows });
   } catch (err) {
-    console.error('Erro ao buscar combos:', err); // <-- log detalhado
+    console.error('Erro ao buscar combos:', err);
     res.status(500).json({ error: 'Erro ao buscar combos.', details: err.message });
   }
 });
@@ -1628,7 +1628,7 @@ app.get('/api/admin/combos', async (req, res) => {
   try {
     const combos = await pool.query(`
       SELECT c.id, c.nome, 
-        COALESCE(json_agg(json_build_object('id', a.id, 'nome', a.nome)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
       FROM combos c
       LEFT JOIN combo_atos ca ON ca.combo_id = c.id
       LEFT JOIN atos a ON ca.ato_id = a.id
