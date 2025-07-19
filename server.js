@@ -1809,6 +1809,17 @@ app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
   }
 });
 
+app.delete('/api/admin/combos/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM combos WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir combo:', err);
+    res.status(500).json({ error: 'Erro ao excluir combo.' });
+  }
+});
+
 app.post('/api/admin/combos', async (req, res) => {
   const { nome, atos } = req.body;
   if (!nome || !Array.isArray(atos)) {
