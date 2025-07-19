@@ -1657,8 +1657,23 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
       res.status(500).json({ error: 'Erro ao excluir combo.' });
     }
   });
-
-
+//lista os combos cadastrados
+  app.get('/api/admin/combos/listar', async (req, res) => {
+    try {
+      const combos = await db.query(`
+        SELECT c.id, c.nome, 
+          COALESCE(json_agg(json_build_object('id', a.id, 'nome', a.nome)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+        FROM combos c
+        LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+        LEFT JOIN atos a ON ca.ato_id = a.id
+        GROUP BY c.id
+        ORDER BY c.id
+      `);
+      res.json({ combos: combos.rows });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao buscar combos.' });
+    }
+  });
 
 
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
