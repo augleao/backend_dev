@@ -1606,6 +1606,60 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   }
 });
 
+  app.get('/admin/combos', async (req, res) => {
+    try {
+      const combos = await db.query(`
+        SELECT c.id, c.nome, 
+          COALESCE(json_agg(json_build_object('id', a.id, 'nome', a.nome)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+        FROM combos c
+        LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+        LEFT JOIN atos a ON ca.ato_id = a.id
+        GROUP BY c.id
+        ORDER BY c.id
+      `);
+      res.json({ combos: combos.rows });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao buscar combos.' });
+    }
+  });
+
+  // POST /admin/combos - cria um novo combo
+  app.post('/admin/combos', async (req, res) => {
+    const { nome, atosIds } = req.body;
+    if (!nome || !Array.isArray(atosIds) || atosIds.length === 0) {
+      return res.status(400).json({ error: 'Nome e atosIds obrigatórios.' });
+    }
+    try {
+      const comboRes = await db.query(
+        'INSERT INTO combos (nome) VALUES ($1) RETURNING id, nome',
+        [nome]
+      );
+      const comboId = comboRes.rows[0].id;
+      for (const atoId of atosIds) {
+        await db.query(
+          'INSERT INTO combo_atos (combo_id, ato_id) VALUES ($1, $2)',
+          [comboId, atoId]
+        );
+      }
+      res.json({ success: true, combo: comboRes.rows[0] });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao criar combo.' });
+    }
+  });
+
+  // DELETE /admin/combos/:id - exclui um combo pelo id
+  app.delete('/admin/combos/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      await db.query('DELETE FROM combos WHERE id = $1', [id]);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao excluir combo.' });
+    }
+  });
+
+
+
 
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
 app.get('/api/busca-atos/pesquisa', authenticateToken, async (req, res) => {
