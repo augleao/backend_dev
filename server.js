@@ -1619,7 +1619,8 @@ app.get('/api/admin/combos/listar', async (req, res) => {
     `);
     res.json({ combos: combos.rows });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar combos.' });
+    console.error('Erro ao buscar combos:', err); // <-- log detalhado
+    res.status(500).json({ error: 'Erro ao buscar combos.', details: err.message });
   }
 });
 
