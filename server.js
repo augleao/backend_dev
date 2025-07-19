@@ -1606,7 +1606,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   }
 });
 
-  app.get('/admin/combos', async (req, res) => {
+  app.get('/api/admin/combos', async (req, res) => {
     try {
       const combos = await db.query(`
         SELECT c.id, c.nome, 
@@ -1624,7 +1624,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   });
 
   // POST /admin/combos - cria um novo combo
-  app.post('/admin/combos', async (req, res) => {
+  app.post('/api/admin/combos', async (req, res) => {
     const { nome, atosIds } = req.body;
     if (!nome || !Array.isArray(atosIds) || atosIds.length === 0) {
       return res.status(400).json({ error: 'Nome e atosIds obrigatórios.' });
@@ -1648,7 +1648,7 @@ app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
   });
 
   // DELETE /admin/combos/:id - exclui um combo pelo id
-  app.delete('/admin/combos/:id', async (req, res) => {
+  app.delete('/api/admin/combos/:id', async (req, res) => {
     const { id } = req.params;
     try {
       await db.query('DELETE FROM combos WHERE id = $1', [id]);
