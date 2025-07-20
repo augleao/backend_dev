@@ -1925,6 +1925,40 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
   }
 });
 
+//rota para aceitar pedido pelo protocolo
+app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
+  try {
+    const { protocolo } = req.params;
+    const pedidoRes = await pool.query(`
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
+             c.nome as cliente_nome
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      WHERE p.protocolo = $1
+      LIMIT 1
+    `, [protocolo]);
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    const p = pedidoRes.rows[0];
+    const pedido = {
+      protocolo: p.protocolo,
+      tipo: p.tipo,
+      descricao: p.descricao,
+      prazo: p.prazo,
+      criado_em: p.criado_em,
+      cliente: { nome: p.cliente_nome },
+      execucao: { status: '' },
+      pagamento: { status: '' },
+      entrega: { data: '', hora: '' }
+    };
+    res.json({ pedido });
+  } catch (err) {
+    console.error('Erro ao buscar pedido:', err);
+    res.status(500).json({ error: 'Erro ao buscar pedido.' });
+  }
+});
+
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
   const search = req.query.search || '';
