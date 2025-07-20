@@ -21,6 +21,18 @@ const pool = new Pool({
 
 const router = express.Router();
 
+// ...existing code...
+const gerarProtocolo = async () => {
+  // Busca o próximo valor da sequência (crie uma sequence no banco: CREATE SEQUENCE protocolo_seq)
+  const seqRes = await pool.query('SELECT nextval(\'protocolo_seq\') as seq');
+  const seq = seqRes.rows[0].seq;
+  // Data/hora atual
+  const agora = new Date();
+  const dataStr = agora.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 12); // YYYYMMDDHHMM
+  // Protocolo: data + seq
+  return `${dataStr}-${seq}`;
+};
+
 
 dotenv.config();
 const port = process.env.PORT || 3001;
@@ -1820,6 +1832,8 @@ app.delete('/api/admin/combos/:id', authenticate, async (req, res) => {
   }
 });
 
+
+
 app.post('/api/admin/combos', async (req, res) => {
   const { nome, atos } = req.body;
   if (!nome || !Array.isArray(atos)) {
@@ -1846,6 +1860,38 @@ app.post('/api/admin/combos', async (req, res) => {
   } catch (err) {
     console.error('Erro ao criar combo:', err);
     res.status(500).json({ error: 'Erro ao criar combo.' });
+  }
+});
+
+// Rota para criar pedido
+app.post('/api/pedidos', authenticate, async (req, res) => {
+  try {
+    const protocolo = await gerarProtocolo();
+    const { tipo, descricao, prazo, combos } = req.body;
+
+    // Cria o pedido principal
+    const pedidoRes = await pool.query(
+      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo) VALUES ($1, $2, $3, $4) RETURNING id, protocolo',
+      [protocolo, tipo, descricao, prazo]
+    );
+    const pedidoId = pedidoRes.rows[0].id;
+
+    // Salva combos do pedido
+    if (Array.isArray(combos)) {
+      for (const combo of combos) {
+        // Salva combo vinculado ao pedido
+        const comboRes = await pool.query(
+          'INSERT INTO pedido_combos (pedido_id, combo_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4) RETURNING id',
+          [pedidoId, combo.id, combo.quantidade, combo.codigoTributario]
+        );
+        // Se quiser salvar atos individualmente, adicione aqui
+      }
+    }
+
+    res.json({ success: true, protocolo, pedidoId });
+  } catch (err) {
+    console.error('Erro ao criar pedido:', err);
+    res.status(500).json({ error: 'Erro ao criar pedido.' });
   }
 });
 
