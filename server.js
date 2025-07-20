@@ -1899,7 +1899,7 @@ if (Array.isArray(combos)) {
 app.get('/api/pedidos', authenticate, async (req, res) => {
   try {
     const pedidosRes = await pool.query(`
-      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, 
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
              c.nome as cliente_nome
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -1912,6 +1912,7 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
       tipo: p.tipo,
       cliente: { nome: p.cliente_nome },
       prazo: p.prazo,
+      criado_em: p.criado_em, // <-- Adicionado aqui
       execucao: { status: '' },      // Preencha conforme sua lógica
       pagamento: { status: '' },     // Preencha conforme sua lógica
       entrega: { data: '', hora: '' } // Preencha conforme sua lógica
