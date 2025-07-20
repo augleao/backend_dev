@@ -1896,7 +1896,7 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
 
 // Rota para listar pedidos
 
-app.get('/', authenticate, async (req, res) => {
+app.get('/api/pedidos', authenticate, async (req, res) => {
   try {
     // Busca pedidos e dados do cliente
     const pedidosRes = await pool.query(`
