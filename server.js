@@ -1898,7 +1898,6 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
 
 app.get('/api/pedidos', authenticate, async (req, res) => {
   try {
-    // Busca pedidos e dados do cliente
     const pedidosRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, 
              c.nome as cliente_nome
@@ -1907,10 +1906,18 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
       ORDER BY p.id DESC
     `);
 
-    // Opcional: buscar combos/atos, status, pagamento, entrega, etc.
-    // Adapte conforme sua estrutura de dados
+    // Adapte para incluir status, pagamento, entrega, etc. se necessário
+    const pedidos = pedidosRes.rows.map(p => ({
+      protocolo: p.protocolo,
+      tipo: p.tipo,
+      cliente: { nome: p.cliente_nome },
+      prazo: p.prazo,
+      execucao: { status: '' },      // Preencha conforme sua lógica
+      pagamento: { status: '' },     // Preencha conforme sua lógica
+      entrega: { data: '', hora: '' } // Preencha conforme sua lógica
+    }));
 
-    res.json({ pedidos: pedidosRes.rows });
+    res.json({ pedidos });
   } catch (err) {
     console.error('Erro ao listar pedidos:', err);
     res.status(500).json({ error: 'Erro ao listar pedidos.' });
