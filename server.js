@@ -1895,5 +1895,35 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
   }
 });
 
+// Buscar clientes
+router.get('/', async (req, res) => {
+  const search = req.query.search || '';
+  const result = await pool.query(
+    `SELECT * FROM clientes
+     WHERE nome ILIKE $1 OR cpf ILIKE $1
+     ORDER BY nome LIMIT 10`,
+    [`%${search}%`]
+  );
+  res.json({ clientes: result.rows });
+});
+
+// Salvar novo cliente
+router.post('/', async (req, res) => {
+  const { nome, cpf, endereco, telefone, email } = req.body;
+  const result = await pool.query(
+    `INSERT INTO clientes (nome, cpf, endereco, telefone, email)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [nome, cpf, endereco, telefone, email]
+  );
+  res.json(result.rows[0]);
+});
+
+// Apagar cliente
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  await pool.query('DELETE FROM clientes WHERE id = $1', [id]);
+  res.json({ success: true });
+});
+
 
 module.exports = router;
