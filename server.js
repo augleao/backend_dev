@@ -1905,7 +1905,7 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
       LEFT JOIN clientes c ON p.cliente_id = c.id
       ORDER BY p.id DESC
     `);
-
+    console.log('pedidos listados no DB:', pedidosRes);
     // Adapte para incluir status, pagamento, entrega, etc. se necessário
     const pedidos = pedidosRes.rows.map(p => ({
       protocolo: p.protocolo,
