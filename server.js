@@ -1876,15 +1876,13 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
     );
     const pedidoId = pedidoRes.rows[0].id;
 
-    // Salva combos do pedido
+    // Salva cada ato do combo como linha em pedido_combos
     if (Array.isArray(combos)) {
-      for (const combo of combos) {
-        // Salva combo vinculado ao pedido
-        const comboRes = await pool.query(
-          'INSERT INTO pedido_combos (pedido_id, combo_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4) RETURNING id',
-          [pedidoId, combo.id, combo.quantidade, combo.codigoTributario]
+      for (const ato of combos) {
+        await pool.query(
+          'INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4, $5)',
+          [pedidoId, ato.comboId, ato.atoId, ato.quantidade, ato.codigoTributario]
         );
-        // Se quiser salvar atos individualmente, adicione aqui
       }
     }
 
