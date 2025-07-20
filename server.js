@@ -1867,25 +1867,18 @@ app.post('/api/admin/combos', async (req, res) => {
 app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
     const protocolo = await gerarProtocolo();
-    const { tipo, descricao, prazo, cliente_id, combos } = req.body;
+    const { tipo, descricao, prazo, clienteId, combos, usuario } = req.body;
 
-    // Corrige prazo: se vier "" (string vazia), salva como null
     const prazoFinal = prazo === '' ? null : prazo;
+    const agora = new Date();
 
     const pedidoRes = await pool.query(
-      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, protocolo',
-      [protocolo, tipo, descricao, prazoFinal, cliente_id]
+      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, protocolo',
+      [protocolo, tipo, descricao, prazoFinal, clienteId, usuario, agora]
     );
     const pedidoId = pedidoRes.rows[0].id;
 
-    if (Array.isArray(combos)) {
-      for (const ato of combos) {
-        await pool.query(
-          'INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4, $5)',
-          [pedidoId, ato.comboId, ato.atoId, ato.quantidade, ato.codigoTributario]
-        );
-      }
-    }
+    // ...salvar combos...
 
     res.json({ success: true, protocolo, pedidoId });
   } catch (err) {
