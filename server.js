@@ -1896,7 +1896,7 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
 });
 
 // Buscar clientes
-router.get('/api/clientes', async (req, res) => {
+app.get('/api/clientes', async (req, res) => {
   const search = req.query.search || '';
   const result = await pool.query(
     `SELECT * FROM clientes
@@ -1908,7 +1908,7 @@ router.get('/api/clientes', async (req, res) => {
 });
 
 // Salvar novo cliente
-router.post('/api/clientes', async (req, res) => {
+app.post('/api/clientes', async (req, res) => {
   const { nome, cpf, endereco, telefone, email } = req.body;
   const result = await pool.query(
     `INSERT INTO clientes (nome, cpf, endereco, telefone, email)
@@ -1919,7 +1919,7 @@ router.post('/api/clientes', async (req, res) => {
 });
 
 // Apagar cliente
-router.delete('/api/clientes/:id', async (req, res) => {
+app.delete('/api/clientes/:id', async (req, res) => {
   const { id } = req.params;
   await pool.query('DELETE FROM clientes WHERE id = $1', [id]);
   res.json({ success: true });
