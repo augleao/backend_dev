@@ -1879,7 +1879,14 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
     const pedidoId = pedidoRes.rows[0].id;
 
     // ...salvar combos...
-
+if (Array.isArray(combos)) {
+  for (const ato of combos) {
+    await pool.query(
+      'INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4, $5)',
+      [pedidoId, ato.comboId, ato.atoId, ato.quantidade, ato.codigoTributario]
+    );
+  }
+}
     res.json({ success: true, protocolo, pedidoId });
   } catch (err) {
     console.error('Erro ao criar pedido:', err);
