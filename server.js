@@ -1894,6 +1894,29 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
   }
 });
 
+// Rota para listar pedidos
+
+app.get('/', authenticate, async (req, res) => {
+  try {
+    // Busca pedidos e dados do cliente
+    const pedidosRes = await pool.query(`
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, 
+             c.nome as cliente_nome
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      ORDER BY p.id DESC
+    `);
+
+    // Opcional: buscar combos/atos, status, pagamento, entrega, etc.
+    // Adapte conforme sua estrutura de dados
+
+    res.json({ pedidos: pedidosRes.rows });
+  } catch (err) {
+    console.error('Erro ao listar pedidos:', err);
+    res.status(500).json({ error: 'Erro ao listar pedidos.' });
+  }
+});
+
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
   const search = req.query.search || '';
