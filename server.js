@@ -23,14 +23,37 @@ const router = express.Router();
 
 // ...existing code...
 const gerarProtocolo = async () => {
-  // Busca o próximo valor da sequência (crie uma sequence no banco: CREATE SEQUENCE protocolo_seq)
-  const seqRes = await pool.query('SELECT nextval(\'protocolo_seq\') as seq');
-  const seq = seqRes.rows[0].seq;
-  // Data/hora atual
-  const agora = new Date();
-  const dataStr = agora.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 12); // YYYYMMDDHHMM
-  // Protocolo: data + seq
-  return `${dataStr}-${seq}`;
+  try {
+    // Tenta criar a sequence se não existir
+    await pool.query(`
+      CREATE SEQUENCE IF NOT EXISTS protocolo_seq 
+      START WITH 1 
+      INCREMENT BY 1 
+      NO MINVALUE 
+      NO MAXVALUE 
+      CACHE 1
+    `);
+    
+    // Busca o próximo valor da sequência
+    const seqRes = await pool.query('SELECT nextval(\'protocolo_seq\') as seq');
+    const seq = seqRes.rows[0].seq;
+    
+    // Data/hora atual
+    const agora = new Date();
+    const dataStr = agora.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 12); // YYYYMMDDHHMM
+    
+    // Protocolo: data + seq
+    return `${dataStr}-${seq}`;
+  } catch (error) {
+    console.error('Erro ao gerar protocolo:', error);
+    
+    // Fallback: usar timestamp + número aleatório
+    const agora = new Date();
+    const dataStr = agora.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 14); // YYYYMMDDHHMMSS
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    return `${dataStr}-${random}`;
+  }
 };
 
 
@@ -1784,7 +1807,9 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
     const { protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario } = req.body;
     
-    console.log('[POST] /api/pedidos - usuario recebido:', usuario);
+    console.log('[POST] /api/pedidos - dados recebidos:', {
+      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario
+    });
     
     // Se há protocolo, verifica se é uma atualização
     if (protocolo && protocolo.trim() !== '') {
@@ -1821,7 +1846,9 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
     }
     
     // Se não há protocolo ou não existe, cria um novo
-    const novoProtocolo = protocolo || gerarProtocolo();
+    console.log('[POST] /api/pedidos - gerando protocolo...');
+    const novoProtocolo = protocolo || await gerarProtocolo();
+    console.log('[POST] /api/pedidos - protocolo gerado:', novoProtocolo);
     
     // Resto da lógica de criação existente...
     const result = await pool.query(`
@@ -1830,7 +1857,24 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
       RETURNING id
     `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario]);
     
-    // ... resto do código de criação
+    const pedidoId = result.rows[0].id;
+    
+    // Inserir combos se houver
+    if (Array.isArray(combos)) {
+      for (const combo of combos) {
+        await pool.query(`
+          INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Pedido criado com sucesso', 
+      protocolo: novoProtocolo, 
+      id: pedidoId 
+    });
     
   } catch (err) {
     console.error('Erro ao criar/atualizar pedido:', err);
