@@ -1854,7 +1854,7 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
     const agora = new Date();
     console.log('[POST] /api/pedidos - usuario recebido:', usuario);
     const pedidoRes = await pool.query(
-      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, protocolo',
+      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, protocolo',
       [protocolo, tipo, descricao, prazoFinal, clienteId, valorAdiantado, observacao, usuario, agora]
     );
     const pedidoId = pedidoRes.rows[0].id;
