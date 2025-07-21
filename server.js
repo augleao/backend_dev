@@ -1911,13 +1911,13 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
     const { protocolo } = req.params;
     const pedidoRes = await pool.query(`
-      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
-             p.valor_adiantado, p.usuario, p.observacao,
-             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
-      FROM pedidos p
-      LEFT JOIN clientes c ON p.cliente_id = c.id
-      WHERE p.protocolo = $1
-      LIMIT 1
+ SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
+         p.valor_adiantado, p.usuario, p.observacao,
+         c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
+  FROM pedidos p
+  LEFT JOIN clientes c ON p.cliente_id = c.id
+  WHERE p.protocolo = $1
+  LIMIT 1
     `, [protocolo]);
     if (pedidoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
