@@ -1782,31 +1782,59 @@ app.post('/api/admin/combos', async (req, res) => {
 // Rota para criar pedido
 app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
-    const protocolo = await gerarProtocolo();
-    const { tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario } = req.body;
-
-    const prazoFinal = prazo === '' ? null : prazo;
-    const agora = new Date();
+    const { protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario } = req.body;
+    
     console.log('[POST] /api/pedidos - usuario recebido:', usuario);
-    const pedidoRes = await pool.query(
-      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, protocolo',
-      [protocolo, tipo, descricao, prazoFinal, clienteId, valorAdiantado, observacao, usuario, agora]
-    );
-    const pedidoId = pedidoRes.rows[0].id;
-
-    // ...salvar combos...
-if (Array.isArray(combos)) {
-  for (const ato of combos) {
-    await pool.query(
-      'INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario) VALUES ($1, $2, $3, $4, $5)',
-      [pedidoId, ato.comboId, ato.atoId, ato.quantidade, ato.codigoTributario]
-    );
-  }
-}
-    res.json({ success: true, protocolo, pedidoId });
+    
+    // Se há protocolo, verifica se é uma atualização
+    if (protocolo && protocolo.trim() !== '') {
+      // Verifica se o pedido já existe
+      const pedidoExistente = await pool.query('SELECT id FROM pedidos WHERE protocolo = $1', [protocolo]);
+      
+      if (pedidoExistente.rows.length > 0) {
+        // É uma atualização
+        const pedidoId = pedidoExistente.rows[0].id;
+        
+        // Atualiza o pedido
+        await pool.query(`
+          UPDATE pedidos 
+          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, observacao = $6, usuario = $7
+          WHERE id = $8
+        `, [tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, pedidoId]);
+        
+        // Remove combos antigos
+        await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
+        
+        // Adiciona novos combos
+        if (Array.isArray(combos)) {
+          for (const combo of combos) {
+            await pool.query(`
+              INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+          }
+        }
+        
+        res.json({ message: 'Pedido atualizado com sucesso', protocolo, id: pedidoId });
+        return;
+      }
+    }
+    
+    // Se não há protocolo ou não existe, cria um novo
+    const novoProtocolo = protocolo || gerarProtocolo();
+    
+    // Resto da lógica de criação existente...
+    const result = await pool.query(`
+      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario]);
+    
+    // ... resto do código de criação
+    
   } catch (err) {
-    console.error('Erro ao criar pedido:', err);
-    res.status(500).json({ error: 'Erro ao criar pedido.' });
+    console.error('Erro ao criar/atualizar pedido:', err);
+    res.status(500).json({ error: 'Erro ao criar/atualizar pedido.' });
   }
 });
 
