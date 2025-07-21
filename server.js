@@ -1653,72 +1653,7 @@ app.get('/api/admin/combos', async (req, res) => {
   }
 });
 
-// GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
-app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
-  try {
-    const { protocolo } = req.params;
 
-    // Busca o pedido e dados do cliente
-    const pedidoRes = await pool.query(`
-      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
-             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
-      FROM pedidos p
-      LEFT JOIN clientes c ON p.cliente_id = c.id
-      WHERE p.protocolo = $1
-      LIMIT 1
-    `, [protocolo]);
-
-    if (pedidoRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Pedido não encontrado.' });
-    }
-    const p = pedidoRes.rows[0];
-
-    // Busca os combos e atos do pedido
-    const combosRes = await pool.query(`
-      SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
-             c.nome as combo_nome,
-             a.codigo as ato_codigo, a.descricao as ato_descricao
-      FROM pedido_combos pc
-      LEFT JOIN combos c ON pc.combo_id = c.id
-      LEFT JOIN atos a ON pc.ato_id = a.id
-      WHERE pc.pedido_id = $1
-    `, [p.id]);
-
-    const combos = combosRes.rows.map(row => ({
-      combo_id: row.combo_id,
-      combo_nome: row.combo_nome,
-      ato_id: row.ato_id,
-      ato_codigo: row.ato_codigo,
-      ato_descricao: row.ato_descricao,
-      quantidade: row.quantidade,
-      codigo_tributario: row.codigo_tributario
-    }));
-
-    const pedido = {
-      protocolo: p.protocolo,
-      tipo: p.tipo,
-      descricao: p.descricao,
-      prazo: p.prazo,
-      criado_em: p.criado_em,
-      cliente: {
-        nome: p.cliente_nome,
-        cpf: p.cpf,
-        endereco: p.endereco,
-        telefone: p.telefone,
-        email: p.email
-      },
-      combos,
-      execucao: { status: '' },
-      pagamento: { status: '' },
-      entrega: { data: '', hora: '' }
-    };
-
-    res.json({ pedido });
-  } catch (err) {
-    console.error('Erro ao buscar pedido:', err);
-    res.status(500).json({ error: 'Erro ao buscar pedido.' });
-  }
-});
 
 // GET /api/atos-tabela/usuarios - Buscar usuários únicos para sugestões
 app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
@@ -1906,7 +1841,7 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
   }
 });
 
-//rota para aceitar pedido pelo protocolo
+//rota para buscar pedido por protocolo - inclui valor_adiantado, usuario e observacao
 app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
     const { protocolo } = req.params;
