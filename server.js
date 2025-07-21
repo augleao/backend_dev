@@ -1846,20 +1846,22 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
     const { protocolo } = req.params;
     const pedidoRes = await pool.query(`
- SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
-         p.valor_adiantado, p.usuario, p.observacao,
-         c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
-  FROM pedidos p
-  LEFT JOIN clientes c ON p.cliente_id = c.id
-  WHERE p.protocolo = $1
-  LIMIT 1
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
+             p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
+             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      WHERE p.protocolo = $1
+      LIMIT 1
     `, [protocolo]);
+    
     if (pedidoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
+    
     const p = pedidoRes.rows[0];
 
-    // Buscar combos e atos do pedido (mantém seu código atual)
+    // Buscar combos e atos do pedido
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
              c.nome as combo_nome,
@@ -1889,7 +1891,9 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       valor_adiantado: p.valor_adiantado,
       usuario: p.usuario,
       observacao: p.observacao,
+      cliente_id: p.cliente_id, // Adiciona o cliente_id aqui
       cliente: {
+        id: p.cliente_id, // Adiciona o ID do cliente dentro do objeto cliente
         nome: p.cliente_nome,
         cpf: p.cpf,
         endereco: p.endereco,
@@ -1901,6 +1905,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       pagamento: { status: '' },
       entrega: { data: '', hora: '' }
     };
+    
     res.json({ pedido });
   } catch (err) {
     console.error('Erro ao buscar pedido:', err);
