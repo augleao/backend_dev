@@ -1911,8 +1911,9 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
     const { protocolo } = req.params;
     const pedidoRes = await pool.query(`
-      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
-             c.nome as cliente_nome
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
+             p.valor_adiantado, p.usuario, p.observacao,
+             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
       WHERE p.protocolo = $1
@@ -1922,13 +1923,45 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
     const p = pedidoRes.rows[0];
+
+    // Buscar combos e atos do pedido (mantém seu código atual)
+    const combosRes = await pool.query(`
+      SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
+             c.nome as combo_nome,
+             a.codigo as ato_codigo, a.descricao as ato_descricao
+      FROM pedido_combos pc
+      LEFT JOIN combos c ON pc.combo_id = c.id
+      LEFT JOIN atos a ON pc.ato_id = a.id
+      WHERE pc.pedido_id = $1
+    `, [p.id]);
+
+    const combos = combosRes.rows.map(row => ({
+      combo_id: row.combo_id,
+      combo_nome: row.combo_nome,
+      ato_id: row.ato_id,
+      ato_codigo: row.ato_codigo,
+      ato_descricao: row.ato_descricao,
+      quantidade: row.quantidade,
+      codigo_tributario: row.codigo_tributario
+    }));
+
     const pedido = {
       protocolo: p.protocolo,
       tipo: p.tipo,
       descricao: p.descricao,
       prazo: p.prazo,
       criado_em: p.criado_em,
-      cliente: { nome: p.cliente_nome },
+      valor_adiantado: p.valor_adiantado,
+      usuario: p.usuario,
+      observacao: p.observacao,
+      cliente: {
+        nome: p.cliente_nome,
+        cpf: p.cpf,
+        endereco: p.endereco,
+        telefone: p.telefone,
+        email: p.email
+      },
+      combos,
       execucao: { status: '' },
       pagamento: { status: '' },
       entrega: { data: '', hora: '' }
