@@ -1940,6 +1940,25 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   }
 });
 
+//rota para listar combos
+
+app.get('/api/combos', async (req, res) => {
+  try {
+    const combos = await pool.query(`
+      SELECT c.id, c.nome, 
+        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+      FROM combos c
+      LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+      LEFT JOIN atos a ON ca.ato_id = a.id
+      GROUP BY c.id
+      ORDER BY c.id
+    `);
+    res.json({ combos: combos.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar combos.' });
+  }
+});
+
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
   const search = req.query.search || '';
