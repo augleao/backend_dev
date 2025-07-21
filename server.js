@@ -1848,14 +1848,14 @@ app.post('/api/admin/combos', async (req, res) => {
 app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
     const protocolo = await gerarProtocolo();
-    const { tipo, descricao, prazo, clienteId, combos, usuario } = req.body;
+    const { tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario } = req.body;
 
     const prazoFinal = prazo === '' ? null : prazo;
     const agora = new Date();
     console.log('[POST] /api/pedidos - usuario recebido:', usuario);
     const pedidoRes = await pool.query(
-      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, protocolo',
-      [protocolo, tipo, descricao, prazoFinal, clienteId, usuario, agora]
+      'INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valorAdiantado, observacao, usuario, criado_em) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, protocolo',
+      [protocolo, tipo, descricao, prazoFinal, clienteId, valorAdiantado, observacao, usuario, agora]
     );
     const pedidoId = pedidoRes.rows[0].id;
 
