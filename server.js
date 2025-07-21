@@ -1654,88 +1654,69 @@ app.get('/api/admin/combos', async (req, res) => {
 });
 
 // GET /api/atos-tabela/pesquisa - Pesquisar atos com filtros
-app.get('/api/busca-atos/pesquisa', authenticateToken, async (req, res) => {
-  const { dataInicial, dataFinal, usuario, codigo, tributacao } = req.query;
-  console.log('[busca-atos][PESQUISA] Parâmetros recebidos:', req.query);
-
+app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
-    let query = `
-      SELECT 
-        ap.id,
-        ap.data,
-        ap.hora,
-        ap.codigo,
-        ap.tributacao,
-        cg.descricao as tributacao_descricao,
-        ap.descricao,
-        ap.quantidade,
-        ap.valor_unitario,
-        ap.pagamentos,
-        ap.detalhes_pagamentos,
-        ap.usuario
-      FROM atos_praticados ap
-      LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    let paramCount = 0;
+    const { protocolo } = req.params;
 
-    // Filtro por período de datas
-    if (dataInicial) {
-      paramCount++;
-      query += ` AND ap.data >= $${paramCount}`;
-      params.push(dataInicial);
+    // Busca o pedido e dados do cliente
+    const pedidoRes = await pool.query(`
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
+             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      WHERE p.protocolo = $1
+      LIMIT 1
+    `, [protocolo]);
+
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
-    
-    if (dataFinal) {
-      paramCount++;
-      query += ` AND ap.data <= $${paramCount}`;
-      params.push(dataFinal);
-    }
+    const p = pedidoRes.rows[0];
 
-    // Filtro por usuário (escrevente)
-    if (usuario) {
-      paramCount++;
-      query += ` AND ap.usuario ILIKE $${paramCount}`;
-      params.push(`%${usuario}%`);
-    }
+    // Busca os combos e atos do pedido
+    const combosRes = await pool.query(`
+      SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
+             c.nome as combo_nome,
+             a.codigo as ato_codigo, a.descricao as ato_descricao
+      FROM pedido_combos pc
+      LEFT JOIN combos c ON pc.combo_id = c.id
+      LEFT JOIN atos a ON pc.ato_id = a.id
+      WHERE pc.pedido_id = $1
+    `, [p.id]);
 
-    // Filtro por código do ato
-    if (codigo) {
-      paramCount++;
-      query += ` AND ap.codigo ILIKE $${paramCount}`;
-      params.push(`%${codigo}%`);
-    }
+    const combos = combosRes.rows.map(row => ({
+      combo_id: row.combo_id,
+      combo_nome: row.combo_nome,
+      ato_id: row.ato_id,
+      ato_codigo: row.ato_codigo,
+      ato_descricao: row.ato_descricao,
+      quantidade: row.quantidade,
+      codigo_tributario: row.codigo_tributario
+    }));
 
-    // Filtro por tributação
-    if (tributacao) {
-      paramCount++;
-      query += ` AND ap.tributacao ILIKE $${paramCount}`;
-      params.push(`%${tributacao}%`);
-    }
+    const pedido = {
+      protocolo: p.protocolo,
+      tipo: p.tipo,
+      descricao: p.descricao,
+      prazo: p.prazo,
+      criado_em: p.criado_em,
+      cliente: {
+        nome: p.cliente_nome,
+        cpf: p.cpf,
+        endereco: p.endereco,
+        telefone: p.telefone,
+        email: p.email
+      },
+      combos,
+      execucao: { status: '' },
+      pagamento: { status: '' },
+      entrega: { data: '', hora: '' }
+    };
 
-    // Ordenação
-    query += ` ORDER BY ap.data DESC, ap.hora DESC`;
-
-    console.log('[busca-atos][PESQUISA] Query:', query);
-    console.log('[busca-atos][PESQUISA] Params:', params);
-
-    const result = await pool.query(query, params);
-
-    console.log('[busca-atos][PESQUISA] Resultados encontrados:', result.rowCount);
-
-    res.json({
-      atos: result.rows,
-      total: result.rowCount
-    });
-
-  } catch (error) {
-    console.error('[busca-atos][PESQUISA] Erro:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: error.message
-    });
+    res.json({ pedido });
+  } catch (err) {
+    console.error('Erro ao buscar pedido:', err);
+    res.status(500).json({ error: 'Erro ao buscar pedido.' });
   }
 });
 
