@@ -1841,6 +1841,33 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
   }
 });
 
+// rota para apagar pedido
+
+app.delete('/api/pedidos/:protocolo', authenticate, async (req, res) => {
+  try {
+    const { protocolo } = req.params;
+    
+    // Primeiro, busca o ID do pedido
+    const pedidoRes = await pool.query('SELECT id FROM pedidos WHERE protocolo = $1', [protocolo]);
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    
+    const pedidoId = pedidoRes.rows[0].id;
+    
+    // Remove os combos associados primeiro (devido à foreign key)
+    await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
+    
+    // Remove o pedido
+    await pool.query('DELETE FROM pedidos WHERE id = $1', [pedidoId]);
+    
+    res.json({ message: 'Pedido excluído com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao excluir pedido:', err);
+    res.status(500).json({ error: 'Erro ao excluir pedido.' });
+  }
+});
+
 //rota para buscar pedido por protocolo - inclui valor_adiantado, usuario e observacao
 app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
