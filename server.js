@@ -1645,7 +1645,12 @@ app.get('/api/admin/combos/listar', async (req, res) => {
   try {
     const combos = await pool.query(`
       SELECT c.id, c.nome, 
-        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+        COALESCE(json_agg(json_build_object(
+          'id', a.id, 
+          'codigo', a.codigo, 
+          'descricao', a.descricao,
+          'valor_final', a.valor_final
+        ) ORDER BY ca.ordem) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
       FROM combos c
       LEFT JOIN combo_atos ca ON ca.combo_id = c.id
       LEFT JOIN atos a ON ca.ato_id = a.id
