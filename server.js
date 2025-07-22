@@ -1966,10 +1966,11 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const p = pedidoRes.rows[0];
 
     // Buscar combos e atos do pedido
+
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
              c.nome as combo_nome,
-             a.codigo as ato_codigo, a.descricao as ato_descricao
+             a.codigo as ato_codigo, a.descricao as ato_descricao, a.valor_final
       FROM pedido_combos pc
       LEFT JOIN combos c ON pc.combo_id = c.id
       LEFT JOIN atos a ON pc.ato_id = a.id
@@ -1982,6 +1983,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       ato_id: row.ato_id,
       ato_codigo: row.ato_codigo,
       ato_descricao: row.ato_descricao,
+      valor_final: row.valor_final,
       quantidade: row.quantidade,
       codigo_tributario: row.codigo_tributario
     }));
