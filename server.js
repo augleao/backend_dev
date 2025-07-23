@@ -2072,5 +2072,12 @@ app.delete('/api/clientes/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// Middleware global para erros não tratados
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Erro interno do servidor', details: err && err.message ? err.message : String(err) });
+  }
+});
 
 module.exports = router;
