@@ -1922,7 +1922,9 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
     res.json({ pedidos });
   } catch (err) {
     console.error('Erro ao listar pedidos:', err);
-    res.status(500).json({ error: 'Erro ao listar pedidos.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao listar pedidos.', details: err && err.message ? err.message : String(err) });
+    }
   }
 });
 
@@ -1931,25 +1933,22 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
 app.delete('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   try {
     const { protocolo } = req.params;
-    
     // Primeiro, busca o ID do pedido
     const pedidoRes = await pool.query('SELECT id FROM pedidos WHERE protocolo = $1', [protocolo]);
     if (pedidoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
-    
     const pedidoId = pedidoRes.rows[0].id;
-    
     // Remove os combos associados primeiro (devido à foreign key)
     await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
-    
     // Remove o pedido
     await pool.query('DELETE FROM pedidos WHERE id = $1', [pedidoId]);
-    
     res.json({ message: 'Pedido excluído com sucesso.' });
   } catch (err) {
     console.error('Erro ao excluir pedido:', err);
-    res.status(500).json({ error: 'Erro ao excluir pedido.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao excluir pedido.', details: err && err.message ? err.message : String(err) });
+    }
   }
 });
 
@@ -1967,13 +1966,10 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       WHERE p.protocolo = $1
       LIMIT 1
     `, [protocolo]);
-    
     if (pedidoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
-    
     const p = pedidoRes.rows[0];
-
     // Buscar combos e atos do pedido
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
@@ -1984,7 +1980,6 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       LEFT JOIN atos a ON pc.ato_id = a.id
       WHERE pc.pedido_id = $1
     `, [p.id]);
-
     const combos = combosRes.rows.map(row => ({
       combo_id: row.combo_id,
       combo_nome: row.combo_nome,
@@ -1995,7 +1990,6 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       quantidade: row.quantidade,
       codigo_tributario: row.codigo_tributario
     }));
-
     const pedido = {
       protocolo: p.protocolo,
       tipo: p.tipo,
@@ -2021,11 +2015,12 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       pagamento: { status: '' },
       entrega: { data: '', hora: '' }
     };
-    
     res.json({ pedido });
   } catch (err) {
     console.error('Erro ao buscar pedido:', err);
-    res.status(500).json({ error: 'Erro ao buscar pedido.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao buscar pedido.', details: err && err.message ? err.message : String(err) });
+    }
   }
 });
 //rota para listar combos
