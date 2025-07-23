@@ -1810,12 +1810,16 @@ app.post('/api/admin/combos', async (req, res) => {
 // Rota para criar pedido
 app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
-    const { protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario } = req.body;
-    
+    const { 
+      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
+      combos, usuario, origem, origemInfo 
+    } = req.body;
+
     console.log('[POST] /api/pedidos - dados recebidos:', {
-      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, combos, usuario
+      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
+      combos, usuario, origem, origemInfo
     });
-    
+
     // Se há protocolo, verifica se é uma atualização
     if (protocolo && protocolo.trim() !== '') {
       // Verifica se o pedido já existe
@@ -1828,9 +1832,9 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         // Atualiza o pedido
         await pool.query(`
           UPDATE pedidos 
-          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, observacao = $6, usuario = $7
-          WHERE id = $8
-        `, [tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, pedidoId]);
+          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, observacao = $6, usuario = $7, origem = $8, origem_info = $9
+          WHERE id = $10
+        `, [tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, origem, origemInfo, pedidoId]);
         
         // Remove combos antigos
         await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
@@ -1849,21 +1853,21 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         return;
       }
     }
-    
+
     // Se não há protocolo ou não existe, cria um novo
     console.log('[POST] /api/pedidos - gerando protocolo...');
     const novoProtocolo = protocolo || await gerarProtocolo();
     console.log('[POST] /api/pedidos - protocolo gerado:', novoProtocolo);
-    
-    // Resto da lógica de criação existente...
+
+    // Criação do novo pedido com os novos campos
     const result = await pool.query(`
-      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario, origem, origem_info)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
-    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario]);
-    
+    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, origem, origemInfo]);
+
     const pedidoId = result.rows[0].id;
-    
+
     // Inserir combos se houver
     if (Array.isArray(combos)) {
       for (const combo of combos) {
@@ -1873,14 +1877,14 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
       }
     }
-    
+
     res.json({ 
       success: true, 
       message: 'Pedido criado com sucesso', 
       protocolo: novoProtocolo, 
       id: pedidoId 
     });
-    
+
   } catch (err) {
     console.error('Erro ao criar/atualizar pedido:', err);
     res.status(500).json({ error: 'Erro ao criar/atualizar pedido.' });
