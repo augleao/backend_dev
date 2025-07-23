@@ -1897,22 +1897,26 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
   try {
     const pedidosRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
+             p.origem, p.origem_info,
              c.nome as cliente_nome
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
       ORDER BY p.id DESC
     `);
     console.log('pedidos listados no DB:', pedidosRes);
-    // Adapte para incluir status, pagamento, entrega, etc. se necessário
+
     const pedidos = pedidosRes.rows.map(p => ({
       protocolo: p.protocolo,
       tipo: p.tipo,
       cliente: { nome: p.cliente_nome },
       prazo: p.prazo,
-      criado_em: p.criado_em, // <-- Adicionado aqui
-      execucao: { status: '' },      // Preencha conforme sua lógica
-      pagamento: { status: '' },     // Preencha conforme sua lógica
-      entrega: { data: '', hora: '' } // Preencha conforme sua lógica
+      criado_em: p.criado_em,
+      descricao: p.descricao,
+      origem: p.origem,
+      origemInfo: p.origem_info,
+      execucao: { status: '' },
+      pagamento: { status: '' },
+      entrega: { data: '', hora: '' }
     }));
 
     res.json({ pedidos });
@@ -1956,6 +1960,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const pedidoRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
              p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
+             p.origem, p.origem_info,
              c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -1970,7 +1975,6 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const p = pedidoRes.rows[0];
 
     // Buscar combos e atos do pedido
-
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
              c.nome as combo_nome,
@@ -2001,9 +2005,11 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       valor_adiantado: p.valor_adiantado,
       usuario: p.usuario,
       observacao: p.observacao,
-      cliente_id: p.cliente_id, // Adiciona o cliente_id aqui
+      origem: p.origem,
+      origemInfo: p.origem_info,
+      cliente_id: p.cliente_id,
       cliente: {
-        id: p.cliente_id, // Adiciona o ID do cliente dentro do objeto cliente
+        id: p.cliente_id,
         nome: p.cliente_nome,
         cpf: p.cpf,
         endereco: p.endereco,
@@ -2022,7 +2028,6 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar pedido.' });
   }
 });
-
 //rota para listar combos
 
 app.get('/api/combos', async (req, res) => {
