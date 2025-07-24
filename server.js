@@ -1681,7 +1681,28 @@ app.get('/api/admin/combos', async (req, res) => {
   }
 });
 
+// Exemplo de rota Express para sugestões de códigos tributários
+app.get('/api/codigos-tributarios', async (req, res) => {
+  const termo = req.query.s || '';
+  if (termo.length < 2) return res.json({ sugestoes: [] });
 
+  // Exemplo usando PostgreSQL (ajuste para seu banco)
+  const query = `
+    SELECT codigo, descricao
+    FROM codigos_tributarios
+    WHERE codigo ILIKE $1 OR descricao ILIKE $1
+    ORDER BY codigo
+    LIMIT 10
+  `;
+  const values = [`%${termo}%`];
+  try {
+    const { rows } = await db.query(query, values);
+    res.json({ sugestoes: rows });
+  } catch (err) {
+    console.error('Erro ao buscar códigos tributários:', err);
+    res.status(500).json({ sugestoes: [] });
+  }
+});
 
 // GET /api/atos-tabela/usuarios - Buscar usuários únicos para sugestões
 app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
