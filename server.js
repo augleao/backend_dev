@@ -1689,7 +1689,7 @@ app.get('/api/codigos-tributarios', async (req, res) => {
   // Exemplo usando PostgreSQL (ajuste para seu banco)
   const query = `
     SELECT codigo, descricao
-    FROM codigos_tributarios
+    FROM codigos_gratuitos
     WHERE codigo ILIKE $1 OR descricao ILIKE $1
     ORDER BY codigo
     LIMIT 10
