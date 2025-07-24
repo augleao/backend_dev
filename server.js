@@ -1696,7 +1696,7 @@ app.get('/api/codigos-tributarios', async (req, res) => {
   `;
   const values = [`%${termo}%`];
   try {
-    const { rows } = await db.query(query, values);
+    const { rows } = await pool.query(query, values);
     res.json({ sugestoes: rows });
   } catch (err) {
     console.error('Erro ao buscar códigos tributários:', err);
