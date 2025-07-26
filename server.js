@@ -1681,7 +1681,27 @@ app.get('/api/admin/combos', async (req, res) => {
   }
 });
 
-// Exemplo de rota Express para sugestões de códigos tributários
+
+// rota para buscar o status do pedido
+app.get('/api/pedidos/:protocolo/status', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    // Exemplo com Knex:
+    // const result = await knex('pedidos').select('status').where({ protocolo }).first();
+
+    // Exemplo com Sequelize:
+    // const result = await Pedido.findOne({ where: { protocolo }, attributes: ['status'] });
+
+    if (!result) {
+      return res.status(404).json({ error: 'Pedido não encontrado' });
+    }
+    res.json({ status: result.status });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar status do pedido' });
+  }
+});
+
+// rota Express para sugestões de códigos tributários
 app.get('/api/codigos-tributarios', async (req, res) => {
   const termo = req.query.s || '';
   if (termo.length < 2) return res.json({ sugestoes: [] });
