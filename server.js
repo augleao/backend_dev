@@ -1683,23 +1683,7 @@ app.get('/api/admin/combos', async (req, res) => {
 
 
 // rota para buscar o status do pedido
-app.get('/api/pedidos/:protocolo/status', async (req, res) => {
-  const { protocolo } = req.params;
-  try {
-    // Exemplo com Knex:
-    // const result = await knex('pedidos').select('status').where({ protocolo }).first();
 
-    // Exemplo com Sequelize:
-    // const result = await Pedido.findOne({ where: { protocolo }, attributes: ['status'] });
-
-    if (!result) {
-      return res.status(404).json({ error: 'Pedido não encontrado' });
-    }
-    res.json({ status: result.status });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar status do pedido' });
-  }
-});
 
 // rota Express para sugestões de códigos tributários
 app.get('/api/codigos-tributarios', async (req, res) => {
@@ -2000,7 +1984,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const pedidoRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
              p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
-             p.origem, p.origem_info,
+             p.origem, p.origem_info, p.status,
              c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -2042,6 +2026,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       observacao: p.observacao,
       origem: p.origem,
       origemInfo: p.origem_info,
+      status: p.status || '',
       cliente_id: p.cliente_id,
       cliente: {
         id: p.cliente_id,
