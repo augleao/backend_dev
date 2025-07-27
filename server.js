@@ -1995,6 +1995,14 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
     const p = pedidoRes.rows[0];
+
+    // Buscar o último status do pedido
+    const statusRes = await pool.query(
+      `SELECT status FROM pedido_status WHERE protocolo = $1 ORDER BY data_hora DESC LIMIT 1`,
+      [protocolo]
+    );
+    const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : (p.status || '');
+
     // Buscar combos e atos do pedido
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
@@ -2026,7 +2034,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       observacao: p.observacao,
       origem: p.origem,
       origemInfo: p.origem_info,
-      status: p.status || '',
+      status: ultimoStatus,
       cliente_id: p.cliente_id,
       cliente: {
         id: p.cliente_id,
@@ -2049,6 +2057,21 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     }
   }
 });
+// POST /api/pedidos/:protocolo/status
+app.post('/api/pedidos/:protocolo/status', async (req, res) => {
+  const { protocolo } = req.params;
+  const { status, usuario } = req.body;
+  try {
+    await db.query(
+      'INSERT INTO pedido_status (protocolo, status, usuario) VALUES ($1, $2, $3)',
+      [protocolo, status, usuario]
+    );
+    res.status(201).json({ message: 'Status salvo com sucesso' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar status' });
+  }
+});
+
 //rota para listar combos
 
 app.get('/api/combos', async (req, res) => {
