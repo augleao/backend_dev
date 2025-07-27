@@ -2125,7 +2125,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
     const pedidoRes = await pool.query(
       `SELECT 
          p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
-         p.valor_adiantado, p.valor_adiantado_detalhes,
+         p.valor_adiantado_detalhes,
          c.nome as cliente_nome, c.telefone,
          u.serventia as usuario_serventia,
          s.nome_abreviado, s.nome_completo, s.endereco, s.cnpj, 
@@ -2142,7 +2142,6 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
     const pedido = pedidoRes.rows[0];
-    console.log('[RECIBO] valor_adiantado:', pedido.valor_adiantado);
     console.log('[RECIBO] valor_adiantado_detalhes (raw):', pedido.valor_adiantado_detalhes);
     let detalhes = [];
     if (pedido.valor_adiantado_detalhes) {
@@ -2159,7 +2158,6 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
         protocolo: pedido.protocolo,
         descricao: pedido.descricao,
         criado_em: pedido.criado_em,
-        valor_adiantado: pedido.valor_adiantado,
         valorAdiantadoDetalhes: detalhes,
         cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
         serventia: {
