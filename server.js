@@ -2022,6 +2022,14 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       quantidade: row.quantidade,
       codigo_tributario: row.codigo_tributario
     }));
+    let detalhes = [];
+    if (p.valor_adiantado_detalhes) {
+      try {
+        detalhes = JSON.parse(p.valor_adiantado_detalhes);
+      } catch (e) {
+        detalhes = [];
+      }
+    }
     const pedido = {
       protocolo: p.protocolo,
       tipo: p.tipo,
@@ -2029,7 +2037,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       prazo: p.prazo,
       criado_em: p.criado_em,
       valor_adiantado: p.valor_adiantado,
-      valorAdiantadoDetalhes: p.valor_adiantado_detalhes || [],
+      valorAdiantadoDetalhes: detalhes,
       usuario: p.usuario,
       observacao: p.observacao,
       origem: p.origem,
