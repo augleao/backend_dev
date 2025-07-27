@@ -2108,8 +2108,35 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
     res.status(500).json({ error: 'Erro ao salvar status' });
   }
 });
-//rota para listar combos
 
+//rota para buscar recibo do pedido
+app.get('/api/recibo/:protocolo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const pedidoRes = await pool.query(
+      `SELECT p.protocolo, p.descricao, p.criado_em, p.cliente_id, c.nome as cliente_nome, c.telefone
+       FROM pedidos p
+       LEFT JOIN clientes c ON p.cliente_id = c.id
+       WHERE p.protocolo = $1`, [protocolo]
+    );
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    const pedido = pedidoRes.rows[0];
+    res.json({
+      pedido: {
+        protocolo: pedido.protocolo,
+        descricao: pedido.descricao,
+        criado_em: pedido.criado_em,
+        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar pedido.' });
+  }
+});
+
+//rota para listar combos
 app.get('/api/combos', async (req, res) => {
   try {
     const combos = await pool.query(`
