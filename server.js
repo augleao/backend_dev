@@ -2114,9 +2114,16 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
   const { protocolo } = req.params;
   try {
     const pedidoRes = await pool.query(
-      `SELECT p.protocolo, p.descricao, p.criado_em, p.cliente_id, c.nome as cliente_nome, c.telefone
+      `SELECT 
+         p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
+         c.nome as cliente_nome, c.telefone,
+         u.serventia as usuario_serventia,
+         s.nome_abreviado, s.nome_completo, s.endereco, s.cnpj, 
+         s.telefone as telefone_cartorio, s.email, s.whatsapp, s.cns
        FROM pedidos p
        LEFT JOIN clientes c ON p.cliente_id = c.id
+       LEFT JOIN users u ON p.usuario_id = u.id
+       LEFT JOIN serventia s ON s.nome_abreviado = u.serventia
        WHERE p.protocolo = $1`, [protocolo]
     );
     if (pedidoRes.rows.length === 0) {
@@ -2128,7 +2135,17 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
         protocolo: pedido.protocolo,
         descricao: pedido.descricao,
         criado_em: pedido.criado_em,
-        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone }
+        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
+        serventia: {
+          nome_abreviado: pedido.nome_abreviado,
+          nome_completo: pedido.nome_completo,
+          endereco: pedido.endereco,
+          cnpj: pedido.cnpj,
+          telefone: pedido.telefone_cartorio,
+          email: pedido.email,
+          whatsapp: pedido.whatsapp,
+          cns: pedido.cns
+        }
       }
     });
   } catch (err) {
