@@ -1836,9 +1836,9 @@ app.post('/api/admin/combos', async (req, res) => {
 app.post('/api/pedidos', authenticate, async (req, res) => {
   try {
     const { 
-      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
-      combos, usuario, origem, origemInfo 
-    } = req.body;
+  protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, valorAdiantadoDetalhes, observacao, 
+  combos, usuario, origem, origemInfo 
+} = req.body;
 
     console.log('[POST] /api/pedidos - dados recebidos:', {
       protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
@@ -1856,11 +1856,11 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         
         // Atualiza o pedido
         await pool.query(`
-          UPDATE pedidos 
-          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, observacao = $6, usuario = $7, origem = $8, origem_info = $9
-          WHERE id = $10
-        `, [tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, origem, origemInfo, pedidoId]);
-        
+  UPDATE pedidos 
+  SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10
+  WHERE id = $11
+`, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, pedidoId]);
+
         // Remove combos antigos
         await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
         
@@ -1886,11 +1886,10 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
 
     // Criação do novo pedido com os novos campos
     const result = await pool.query(`
-      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, observacao, usuario, origem, origem_info)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id
-    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, usuario, origem, origemInfo]);
-
+  INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  RETURNING id
+`, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo]);
     const pedidoId = result.rows[0].id;
 
     // Inserir combos se houver
