@@ -2063,7 +2063,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
 app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
   const { protocolo } = req.params;
   try {
-    const result = await db.query(
+    const result = await pool.query(
       `SELECT status FROM pedido_status
        WHERE protocolo = $1
        ORDER BY data_hora DESC, id DESC
