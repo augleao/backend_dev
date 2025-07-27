@@ -2122,7 +2122,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
          s.telefone as telefone_cartorio, s.email, s.whatsapp, s.cns
        FROM pedidos p
        LEFT JOIN clientes c ON p.cliente_id = c.id
-       LEFT JOIN users u ON p.usuario_id = u.id
+       LEFT JOIN users u ON p.usuario = u.nome
        LEFT JOIN serventia s ON s.nome_abreviado = u.serventia
        WHERE p.protocolo = $1`, [protocolo]
     );
