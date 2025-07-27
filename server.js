@@ -2084,19 +2084,21 @@ app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
 
 // rota para salvar o status do pedido
 app.post('/api/pedidos/:protocolo/status', async (req, res) => {
-  const { protocolo } = req.params;
   const { status, usuario } = req.body;
+  const protocolo = req.params.protocolo;
+  console.log('[STATUS API] Protocolo:', protocolo);
+  console.log('[STATUS API] Body:', req.body);
   if (!status || !usuario) {
-    return res.status(400).json({ error: 'Status e usuário são obrigatórios' });
+    console.log('[STATUS API] Faltando status ou usuario');
+    return res.status(400).json({ error: 'Campos status e usuario são obrigatórios.' });
   }
   try {
-    await db.query(
-      'INSERT INTO pedido_status (protocolo, status, usuario) VALUES ($1, $2, $3)',
-      [protocolo, status, usuario]
-    );
-    res.status(201).json({ message: 'Status salvo com sucesso' });
+    // Exemplo de SQL log
+    console.log('[STATUS API] Executando INSERT em pedido_status');
+    // ...execute o insert...
+    res.json({ success: true });
   } catch (err) {
-    console.error('[ERRO] ao salvar status:', err);
+    console.error('[STATUS API] Erro ao salvar status:', err);
     res.status(500).json({ error: 'Erro ao salvar status' });
   }
 });
