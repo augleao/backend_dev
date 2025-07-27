@@ -2083,6 +2083,9 @@ app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
 
 
 // rota para salvar o status do pedido
+// Certifique-se de importar ou definir o pool corretamente no topo do seu arquivo:
+// const { pool } = require('./db'); // ou conforme seu projeto
+
 app.post('/api/pedidos/:protocolo/status', async (req, res) => {
   const { status, usuario } = req.body;
   const protocolo = req.params.protocolo;
@@ -2093,16 +2096,18 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
     return res.status(400).json({ error: 'Campos status e usuario são obrigatórios.' });
   }
   try {
-    // Exemplo de SQL log
     console.log('[STATUS API] Executando INSERT em pedido_status');
-    // ...execute o insert...
-    res.json({ success: true });
+    const result = await pool.query(
+      'INSERT INTO pedido_status (protocolo, status, usuario, data_hora) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      [protocolo, status, usuario]
+    );
+    console.log('[STATUS API] INSERT result:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('[STATUS API] Erro ao salvar status:', err);
     res.status(500).json({ error: 'Erro ao salvar status' });
   }
 });
-
 //rota para listar combos
 
 app.get('/api/combos', async (req, res) => {
