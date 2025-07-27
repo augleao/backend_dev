@@ -2058,6 +2058,29 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   }
 });
 
+//rota para obter lista dos pedidos com o ultimo status
+
+app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const result = await db.query(
+      `SELECT status FROM pedido_status
+       WHERE protocolo = $1
+       ORDER BY data_hora DESC, id DESC
+       LIMIT 1`,
+      [protocolo]
+    );
+    if (result.rows.length > 0) {
+      res.json({ status: result.rows[0].status });
+    } else {
+      res.json({ status: '-' });
+    }
+  } catch (err) {
+    console.error('Erro ao buscar último status:', err);
+    res.status(500).json({ error: 'Erro ao buscar status' });
+  }
+});
+
 
 // rota para salvar o status do pedido
 app.post('/api/pedidos/:protocolo/status', async (req, res) => {
