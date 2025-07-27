@@ -2086,7 +2086,9 @@ app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
 app.post('/api/pedidos/:protocolo/status', async (req, res) => {
   const { protocolo } = req.params;
   const { status, usuario } = req.body;
-  console.log('[DEBUG] POST status:', { protocolo, status, usuario });
+  if (!status || !usuario) {
+    return res.status(400).json({ error: 'Status e usuário são obrigatórios' });
+  }
   try {
     await db.query(
       'INSERT INTO pedido_status (protocolo, status, usuario) VALUES ($1, $2, $3)',
