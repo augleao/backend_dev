@@ -2121,6 +2121,7 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
 app.get('/api/recibo/:protocolo', async (req, res) => {
   const { protocolo } = req.params;
   try {
+    console.log(`[RECIBO] Buscando recibo para protocolo: ${protocolo}`);
     const pedidoRes = await pool.query(
       `SELECT 
          p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
@@ -2135,15 +2136,21 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
        LEFT JOIN serventia s ON s.nome_abreviado = u.serventia
        WHERE p.protocolo = $1`, [protocolo]
     );
+    console.log('[RECIBO] Resultado do SELECT:', pedidoRes.rows);
     if (pedidoRes.rows.length === 0) {
+      console.log('[RECIBO] Pedido não encontrado para protocolo:', protocolo);
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
     const pedido = pedidoRes.rows[0];
+    console.log('[RECIBO] valor_adiantado:', pedido.valor_adiantado);
+    console.log('[RECIBO] valor_adiantado_detalhes (raw):', pedido.valor_adiantado_detalhes);
     let detalhes = [];
     if (pedido.valor_adiantado_detalhes) {
       try {
         detalhes = JSON.parse(pedido.valor_adiantado_detalhes);
+        console.log('[RECIBO] valor_adiantado_detalhes (parsed):', detalhes);
       } catch (e) {
+        console.log('[RECIBO] Erro ao fazer parse de valor_adiantado_detalhes:', e);
         detalhes = [];
       }
     }
@@ -2168,6 +2175,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
       }
     });
   } catch (err) {
+    console.log('[RECIBO] Erro ao buscar pedido:', err);
     res.status(500).json({ error: 'Erro ao buscar pedido.' });
   }
 });
