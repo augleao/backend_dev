@@ -1984,7 +1984,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const pedidoRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
              p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
-             p.origem, p.origem_info, p.status,
+             p.origem, p.origem_info,
              c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -2001,7 +2001,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       `SELECT status FROM pedido_status WHERE protocolo = $1 ORDER BY data_hora DESC LIMIT 1`,
       [protocolo]
     );
-    const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : (p.status || '');
+    const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : '';
 
     // Buscar combos e atos do pedido
     const combosRes = await pool.query(`
