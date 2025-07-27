@@ -2057,10 +2057,13 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     }
   }
 });
-// POST /api/pedidos/:protocolo/status
+
+
+// rota para salvar o status do pedido
 app.post('/api/pedidos/:protocolo/status', async (req, res) => {
   const { protocolo } = req.params;
   const { status, usuario } = req.body;
+  console.log('[DEBUG] POST status:', { protocolo, status, usuario });
   try {
     await db.query(
       'INSERT INTO pedido_status (protocolo, status, usuario) VALUES ($1, $2, $3)',
@@ -2068,6 +2071,7 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
     );
     res.status(201).json({ message: 'Status salvo com sucesso' });
   } catch (err) {
+    console.error('[ERRO] ao salvar status:', err);
     res.status(500).json({ error: 'Erro ao salvar status' });
   }
 });
