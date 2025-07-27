@@ -1982,7 +1982,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const { protocolo } = req.params;
     const pedidoRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
-             p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
+             p.valor_adiantado, p.valor_adiantado_detalhes, p.usuario, p.observacao, p.cliente_id,
              p.origem, p.origem_info,
              c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
       FROM pedidos p
@@ -2029,6 +2029,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       prazo: p.prazo,
       criado_em: p.criado_em,
       valor_adiantado: p.valor_adiantado,
+      valorAdiantadoDetalhes: p.valor_adiantado_detalhes || [],
       usuario: p.usuario,
       observacao: p.observacao,
       origem: p.origem,
