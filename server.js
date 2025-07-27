@@ -8,6 +8,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
+const pedidosRouter = require('./routes/pedidos');
+const reciboRouter = require('./routes/recibo');
 const app = express();
 //const port = process.env.PORT || 3001;
 const pool = new Pool({
@@ -1977,86 +1979,7 @@ app.delete('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   }
 });
 
-//rota para buscar pedido por protocolo - inclui valor_adiantado, usuario e observacao
-app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
-  try {
-    const { protocolo } = req.params;
-    const pedidoRes = await pool.query(`
-      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
-             p.valor_adiantado, p.usuario, p.observacao, p.cliente_id,
-             p.origem, p.origem_info,
-             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
-      FROM pedidos p
-      LEFT JOIN clientes c ON p.cliente_id = c.id
-      WHERE p.protocolo = $1
-      LIMIT 1
-    `, [protocolo]);
-    if (pedidoRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Pedido não encontrado.' });
-    }
-    const p = pedidoRes.rows[0];
 
-    // Buscar o último status do pedido
-    const statusRes = await pool.query(
-      `SELECT status FROM pedido_status WHERE protocolo = $1 ORDER BY data_hora DESC LIMIT 1`,
-      [protocolo]
-    );
-    const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : '';
-
-    // Buscar combos e atos do pedido
-    const combosRes = await pool.query(`
-      SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
-             c.nome as combo_nome,
-             a.codigo as ato_codigo, a.descricao as ato_descricao, a.valor_final
-      FROM pedido_combos pc
-      LEFT JOIN combos c ON pc.combo_id = c.id
-      LEFT JOIN atos a ON pc.ato_id = a.id
-      WHERE pc.pedido_id = $1
-    `, [p.id]);
-    const combos = combosRes.rows.map(row => ({
-      combo_id: row.combo_id,
-      combo_nome: row.combo_nome,
-      ato_id: row.ato_id,
-      ato_codigo: row.ato_codigo,
-      ato_descricao: row.ato_descricao,
-      valor_final: row.valor_final,
-      quantidade: row.quantidade,
-      codigo_tributario: row.codigo_tributario
-    }));
-    const pedido = {
-      protocolo: p.protocolo,
-      tipo: p.tipo,
-      descricao: p.descricao,
-      prazo: p.prazo,
-      criado_em: p.criado_em,
-      valor_adiantado: p.valor_adiantado,
-      usuario: p.usuario,
-      observacao: p.observacao,
-      origem: p.origem,
-      origemInfo: p.origem_info,
-      status: ultimoStatus,
-      cliente_id: p.cliente_id,
-      cliente: {
-        id: p.cliente_id,
-        nome: p.cliente_nome,
-        cpf: p.cpf,
-        endereco: p.endereco,
-        telefone: p.telefone,
-        email: p.email
-      },
-      combos,
-      execucao: { status: '' },
-      pagamento: { status: '' },
-      entrega: { data: '', hora: '' }
-    };
-    res.json({ pedido });
-  } catch (err) {
-    console.error('Erro ao buscar pedido:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erro ao buscar pedido.', details: err && err.message ? err.message : String(err) });
-    }
-  }
-});
 
 //rota para obter lista dos pedidos com o ultimo status
 
@@ -2109,49 +2032,10 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
   }
 });
 
-//rota para buscar recibo do pedido
-app.get('/api/recibo/:protocolo', async (req, res) => {
-  const { protocolo } = req.params;
-  try {
-    const pedidoRes = await pool.query(
-      `SELECT 
-         p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
-         c.nome as cliente_nome, c.telefone,
-         u.serventia as usuario_serventia,
-         s.nome_abreviado, s.nome_completo, s.endereco, s.cnpj, 
-         s.telefone as telefone_cartorio, s.email, s.whatsapp, s.cns
-       FROM pedidos p
-       LEFT JOIN clientes c ON p.cliente_id = c.id
-       LEFT JOIN users u ON p.usuario = u.nome
-       LEFT JOIN serventia s ON s.nome_abreviado = u.serventia
-       WHERE p.protocolo = $1`, [protocolo]
-    );
-    if (pedidoRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Pedido não encontrado.' });
-    }
-    const pedido = pedidoRes.rows[0];
-    res.json({
-      pedido: {
-        protocolo: pedido.protocolo,
-        descricao: pedido.descricao,
-        criado_em: pedido.criado_em,
-        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
-        serventia: {
-          nome_abreviado: pedido.nome_abreviado,
-          nome_completo: pedido.nome_completo,
-          endereco: pedido.endereco,
-          cnpj: pedido.cnpj,
-          telefone: pedido.telefone_cartorio,
-          email: pedido.email,
-          whatsapp: pedido.whatsapp,
-          cns: pedido.cns
-        }
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar pedido.' });
-  }
-});
+
+// Modular routes
+app.use('/api/pedidos', pedidosRouter);
+app.use('/api/recibo', reciboRouter);
 
 //rota para listar combos
 app.get('/api/combos', async (req, res) => {
