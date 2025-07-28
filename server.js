@@ -2205,7 +2205,7 @@ app.post('/api/conferencias', async (req, res) => {
 });
 
 // Atualizar uma conferência existente (PUT)
-app.post('/api/conferencias/:id', async (req, res) => {
+app.put('/api/conferencias/:id', async (req, res) => {
   const { id } = req.params;
   const { status, observacao } = req.body;
   const conferencia = await Conferencia.findByPk(id);
