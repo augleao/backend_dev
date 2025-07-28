@@ -2067,7 +2067,6 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
 });
 
 //rota para obter lista dos pedidos com o ultimo status
-
 app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
   const { protocolo } = req.params;
   try {
@@ -2177,6 +2176,55 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar pedido.' });
   }
 });
+
+// Buscar todas as conferências de um protocolo
+app.get('/api/conferencias', async (req, res) => {
+  const { protocolo } = req.query;
+  if (!protocolo) return res.status(400).json({ error: 'Protocolo obrigatório' });
+  const conferencias = await Conferencia.findAll({
+    where: { protocolo },
+    order: [['dataHora', 'DESC']]
+  });
+  res.json({ conferencias });
+});
+
+// Adicionar uma nova conferência
+app.post('/api/conferencias', async (req, res) => {
+  const { protocolo, usuario, status, observacao } = req.body;
+  if (!protocolo || !usuario || !status) {
+    return res.status(400).json({ error: 'Campos obrigatórios: protocolo, usuario, status' });
+  }
+  const conferencia = await Conferencia.create({
+    protocolo,
+    usuario,
+    status,
+    observacao,
+    dataHora: new Date()
+  });
+  res.status(201).json({ conferencia });
+});
+
+// Atualizar uma conferência existente (PUT)
+app.post('/api/conferencias/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status, observacao } = req.body;
+  const conferencia = await Conferencia.findByPk(id);
+  if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+  conferencia.status = status || conferencia.status;
+  conferencia.observacao = observacao || conferencia.observacao;
+  await conferencia.save();
+  res.json({ conferencia });
+});
+
+// Apagar uma conferência (DELETE)
+app.delete('/api/conferencias/:id', async (req, res) => {
+  const { id } = req.params;
+  const conferencia = await Conferencia.findByPk(id);
+  if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+  await conferencia.destroy();
+  res.json({ success: true });
+});
+
 
 //rota para listar combos
 app.get('/api/combos', async (req, res) => {
