@@ -1401,6 +1401,934 @@ app.listen(port, () => {
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
 
+// Middleware para autenticação de token
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Token de acesso requerido' });
+  }
+  // Se quiser validar o JWT, descomente abaixo:
+  // try {
+  //   req.user = jwt.verify(token, JWT_SECRET);
+  // } catch {
+  //   return res.status(401).json({ error: 'Token inválido' });
+  // }
+  next();
+}
+
+// Buscar atos praticados por data
+app.get('/api/atos-praticados', authenticate, async (req, res) => {
+  const { data } = req.query;
+  console.log('[GET] /api/atos-praticados chamada com data:', data);
+  try {
+    let query = 'SELECT * FROM atos_praticados';
+    let params = [];
+    if (data) {
+      query += ' WHERE data = $1';
+      params.push(data);
+    }
+    query += ' ORDER BY hora ASC, id ASC';
+    const result = await pool.query(query, params);
+    console.log('[GET] /api/atos-praticados - retornando', result.rows.length, 'atos');
+    res.json({ atos: result.rows });
+  } catch (err) {
+    console.error('[GET] /api/atos-praticados - erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar atos praticados.' });
+  }
+});
+
+// Adicionar ato praticado
+app.post('/api/atos-praticados', authenticate, async (req, res) => {
+  console.log('[POST] /api/atos-praticados - body recebido:', req.body);
+  const {
+    data,
+    hora,
+    codigo,
+    tributacao,
+    descricao,
+    quantidade,
+    valor_unitario,
+    pagamentos,
+    usuario
+  } = req.body;
+
+  // Log dos campos recebidos
+  console.log('[POST] Campos recebidos:', {
+    data, hora, codigo, tributacao, descricao, quantidade, valor_unitario, pagamentos, usuario
+  });
+
+  const codigoTributacao = tributacao
+  ? String(tributacao).trim().substring(0, 2)
+  : null;
+
+  const params = [
+    data,
+    hora,
+    codigo,
+    codigoTributacao, // Use só o código aqui!
+    descricao,
+    quantidade || 1,
+    valor_unitario || 0,
+    typeof pagamentos === 'object'
+      ? JSON.stringify(pagamentos)
+      : JSON.stringify({ valor: pagamentos }),
+    detalhes_pagamentos || null
+  ];
+
+  const query = `
+    INSERT INTO atos_praticados (
+      data,
+      hora,
+      codigo,
+      tributacao,
+      descricao,
+      quantidade,
+      valor_unitario,
+      detalhes_pagamentos,
+      usuario
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *
+  `;
+
+  const result = await pool.query(query, params);
+
+  console.log('[POST] /api/atos-praticados - inserido com sucesso:', result.rows[0]);
+  res.status(201).json({ ato: result.rows[0] });
+});
+
+// Deletar ato praticado
+app.delete('/api/atos-praticados/:id', authenticate, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await pool.query(`DELETE FROM atos_praticados WHERE id = $1`, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Ato não encontrado.' });
+    }
+    res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao deletar ato pago:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
+// Buscar atos da tabela por data
+app.get('/', authenticateToken, async (req, res) => {
+  const { data } = req.query;
+  console.log('[atos-tabela][GET] Requisição recebida. Query:', req.query);
+
+  try {
+    let query = `
+      SELECT 
+        ap.id,
+        ap.data,
+        ap.hora,
+        ap.codigo,
+        ap.tributacao,
+        cg.descricao as tributacao_descricao,
+        ap.descricao,
+        ap.quantidade,
+        ap.valor_unitario,
+        ap.pagamentos,
+        ap.detalhes_pagamentos,
+        ap.usuario,
+        u.serventia as usuario_serventia
+      FROM atos_praticados ap
+      LEFT JOIN codigos_gratuitos cg ON ap.tributacao = cg.codigo
+      LEFT JOIN public.users u ON ap.usuario = u.nome
+    `;
+    
+    let params = [];
+    if (data) {
+      query += ' WHERE ap.data = $1';
+      params.push(data);
+    }
+    query += ' ORDER BY ap.data DESC, ap.hora DESC, ap.id DESC';
+
+    console.log('[atos-tabela][GET] Query:', query, 'Params:', params);
+
+    const result = await pool.query(query, params);
+
+    console.log('[atos-tabela][GET] Resultados encontrados:', result.rowCount);
+
+    // Formatar os dados para o frontend
+    const atosFormatados = result.rows.map((ato) => ({
+      id: ato.id,
+      data: ato.data,
+      hora: ato.hora,
+      codigo: ato.codigo,
+      tributacao: ato.tributacao,
+      tributacao_descricao: ato.tributacao_descricao,
+      descricao: ato.descricao,
+      quantidade: ato.quantidade,
+      valor_unitario: parseFloat(ato.valor_unitario),
+      pagamentos: ato.pagamentos,
+      detalhes_pagamentos: ato.detalhes_pagamentos,
+      usuario: ato.usuario,
+      usuario_serventia: ato.usuario_serventia
+    }));
+
+    // LOG DO QUE SERÁ ENVIADO AO FRONTEND
+    console.log('[atos-tabela][GET] Enviando ao frontend:', JSON.stringify(atosFormatados, null, 2));
+
+    res.json({
+      success: true,
+      atos: atosFormatados,
+      total: result.rowCount
+    });
+
+  } catch (error) {
+    console.error('[atos-tabela][GET] Erro ao buscar atos:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar atos'
+    });
+  }
+});
+
+// Adicionar ato na tabela
+app.post('/api/atos-tabela', authenticateToken, async (req, res) => {
+  console.log('[atos-tabela][POST] Body recebido:', req.body);
+
+  const {
+    data,
+    hora,
+    codigo,
+    tributacao,
+    descricao,
+    quantidade,
+    valor_unitario,
+    pagamentos,
+    detalhes_pagamentos
+  } = req.body;
+
+  // Validações básicas
+  if (!data || !hora || !codigo || !descricao) {
+    console.log('[busca-atos][POST] Campos obrigatórios faltando!');
+    return res.status(400).json({
+      error: 'Campos obrigatórios: data, hora, codigo, descricao'
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO atos_praticados (
+        data,
+        hora,
+        codigo,
+        tributacao,
+        descricao,
+        quantidade,
+        valor_unitario,
+        detalhes_pagamentos,
+        usuario
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const params = [
+      data,
+      hora,
+      codigo,
+      tributacao || null,
+      descricao,
+      quantidade || 1,
+      valor_unitario || 0,
+      // Garante que pagamentos seja sempre um JSON válido
+      typeof pagamentos === 'object'
+        ? JSON.stringify(pagamentos)
+        : JSON.stringify({ valor: pagamentos }),
+      detalhes_pagamentos || null
+    ];
+
+    console.log('[busca-atos][POST] Query INSERT:', query);
+    console.log('[busca-atos][POST] Params:', params);
+
+    const result = await pool.query(query, params);
+
+    console.log('[busca-atos][POST] Ato inserido com sucesso:', result.rows[0]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Ato adicionado com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[busca-atos][POST] Erro ao inserir ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao adicionar ato'
+    });
+  }
+});
+
+app.get('/api/admin/combos/listar', async (req, res) => {
+  try {
+    const combos = await pool.query(`
+      SELECT c.id, c.nome, 
+        COALESCE(json_agg(json_build_object(
+          'id', a.id, 
+          'codigo', a.codigo, 
+          'descricao', a.descricao,
+          'valor_final', a.valor_final
+        ) ORDER BY ca.ordem) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+      FROM combos c
+      LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+      LEFT JOIN atos a ON ca.ato_id = a.id
+      GROUP BY c.id
+      ORDER BY c.id
+    `);
+    res.json({ combos: combos.rows });
+  } catch (err) {
+    console.error('Erro ao buscar combos:', err);
+    res.status(500).json({ error: 'Erro ao buscar combos.', details: err.message });
+  }
+});
+
+app.get('/api/admin/combos', async (req, res) => {
+  try {
+    const combos = await pool.query(`
+      SELECT c.id, c.nome, 
+        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+      FROM combos c
+      LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+      LEFT JOIN atos a ON ca.ato_id = a.id
+      GROUP BY c.id
+      ORDER BY c.id
+    `);
+    res.json({ combos: combos.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar combos.' });
+  }
+});
+
+
+// rota para buscar o status do pedido
+
+
+// rota Express para sugestões de códigos tributários
+app.get('/api/codigos-tributarios', async (req, res) => {
+  const termo = req.query.s || '';
+  if (termo.length < 2) return res.json({ sugestoes: [] });
+
+  // Exemplo usando PostgreSQL (ajuste para seu banco)
+  const query = `
+    SELECT codigo, descricao
+    FROM codigos_gratuitos
+    WHERE codigo ILIKE $1 OR descricao ILIKE $1
+    ORDER BY codigo
+    LIMIT 10
+  `;
+  const values = [`%${termo}%`];
+  try {
+    const { rows } = await pool.query(query, values);
+    res.json({ sugestoes: rows });
+  } catch (err) {
+    console.error('Erro ao buscar códigos tributários:', err);
+    res.status(500).json({ sugestoes: [] });
+  }
+});
+
+// GET /api/atos-tabela/usuarios - Buscar usuários únicos para sugestões
+app.get('/api/busca-atos/usuarios', authenticateToken, async (req, res) => {
+  const { search } = req.query;
+  console.log('[busca-atos][USUARIOS] Termo de busca:', search);
+
+  try {
+    let query = `
+      SELECT DISTINCT usuario 
+      FROM atos_praticados 
+      WHERE usuario IS NOT NULL
+    `;
+    
+    const params = [];
+    
+    if (search) {
+      query += ` AND usuario ILIKE $1`;
+      params.push(`%${search}%`);
+    }
+    
+    query += ` ORDER BY usuario LIMIT 10`;
+
+    console.log('[busca-atos][USUARIOS] Query:', query);
+    console.log('[busca-atos][USUARIOS] Params:', params);
+
+    const result = await pool.query(query, params);
+    
+    const usuarios = result.rows.map(row => row.usuario);
+
+    console.log('[busca-atos][USUARIOS] Usuários encontrados:', usuarios.length);
+
+    res.json({
+      usuarios: usuarios
+    });
+
+  } catch (error) {
+    console.error('[busca-atos][USUARIOS] Erro:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+// Deletar ato da tabela
+app.delete('/api/busca-atos/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  console.log('[busca-atos][DELETE] Requisição para remover ID:', id);
+
+  if (!id || isNaN(id)) {
+    console.log('[busca-atos][DELETE] ID inválido!');
+    return res.status(400).json({
+      error: 'ID inválido'
+    });
+  }
+
+  try {
+    const query = 'DELETE FROM atos_praticados WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      console.log('[busca-atos][DELETE] Ato não encontrado para remoção.');
+      return res.status(404).json({
+        error: 'Ato não encontrado'
+      });
+    }
+
+    console.log('[busca-atos][DELETE] Ato removido:', result.rows[0]);
+
+    res.json({
+      success: true,
+      message: 'Ato removido com sucesso',
+      ato: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('[busca-atos][DELETE] Erro ao remover ato:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Erro ao remover ato'
+    });
+  }
+});
+
+app.delete('/api/admin/combos/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM combos WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir combo:', err);
+    res.status(500).json({ error: 'Erro ao excluir combo.' });
+  }
+});
+
+
+
+app.post('/api/admin/combos', async (req, res) => {
+  const { nome, atos } = req.body;
+  if (!nome || !Array.isArray(atos)) {
+    return res.status(400).json({ error: 'Nome e atos são obrigatórios.' });
+  }
+
+  try {
+    // Insere combo
+    const comboResult = await pool.query(
+      'INSERT INTO combos (nome) VALUES ($1) RETURNING id',
+      [nome]
+    );
+    const comboId = comboResult.rows[0].id;
+
+    // Insere relação combo-atos
+    for (const atoId of atos) {
+      await pool.query(
+        'INSERT INTO combo_atos (combo_id, ato_id) VALUES ($1, $2)',
+        [comboId, atoId]
+      );
+    }
+
+    res.status(201).json({ success: true, comboId });
+  } catch (err) {
+    console.error('Erro ao criar combo:', err);
+    res.status(500).json({ error: 'Erro ao criar combo.' });
+  }
+});
+
+// Rota para criar pedido
+app.post('/api/pedidos', authenticate, async (req, res) => {
+  try {
+    const { 
+  protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, valorAdiantadoDetalhes, observacao, 
+  combos, usuario, origem, origemInfo 
+} = req.body;
+
+    console.log('[POST] /api/pedidos - dados recebidos:', {
+      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
+      combos, usuario, origem, origemInfo
+    });
+
+    // Se há protocolo, verifica se é uma atualização
+    if (protocolo && protocolo.trim() !== '') {
+      // Verifica se o pedido já existe
+      const pedidoExistente = await pool.query('SELECT id FROM pedidos WHERE protocolo = $1', [protocolo]);
+      
+      if (pedidoExistente.rows.length > 0) {
+        // É uma atualização
+        const pedidoId = pedidoExistente.rows[0].id;
+        
+        // Atualiza o pedido
+        await pool.query(`
+  UPDATE pedidos 
+  SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10
+  WHERE id = $11
+`, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, pedidoId]);
+
+        // Remove combos antigos
+        await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
+        
+        // Adiciona novos combos
+        if (Array.isArray(combos)) {
+          for (const combo of combos) {
+            await pool.query(`
+              INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+          }
+        }
+        
+        res.json({ message: 'Pedido atualizado com sucesso', protocolo, id: pedidoId });
+        return;
+      }
+    }
+
+    // Se não há protocolo ou não existe, cria um novo
+    console.log('[POST] /api/pedidos - gerando protocolo...');
+    const novoProtocolo = protocolo || await gerarProtocolo();
+    console.log('[POST] /api/pedidos - protocolo gerado:', novoProtocolo);
+
+    // Criação do novo pedido com os novos campos
+    const result = await pool.query(`
+  INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  RETURNING id
+`, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo]);
+    const pedidoId = result.rows[0].id;
+
+    // Inserir combos se houver
+    if (Array.isArray(combos)) {
+      for (const combo of combos) {
+        await pool.query(`
+          INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Pedido criado com sucesso', 
+      protocolo: novoProtocolo, 
+      id: pedidoId 
+    });
+
+  } catch (err) {
+    console.error('Erro ao criar/atualizar pedido:', err);
+    res.status(500).json({ error: 'Erro ao criar/atualizar pedido.' });
+  }
+});
+
+// Rota para listar pedidos
+
+app.get('/api/pedidos', authenticate, async (req, res) => {
+  try {
+    const pedidosRes = await pool.query(`
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
+             p.origem, p.origem_info,
+             c.nome as cliente_nome
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      ORDER BY p.id DESC
+    `);
+    console.log('pedidos listados no DB:', pedidosRes);
+
+    const pedidos = pedidosRes.rows.map(p => ({
+      protocolo: p.protocolo,
+      tipo: p.tipo,
+      cliente: { nome: p.cliente_nome },
+      prazo: p.prazo,
+      criado_em: p.criado_em,
+      descricao: p.descricao,
+      origem: p.origem,
+      origemInfo: p.origem_info,
+      execucao: { status: '' },
+      pagamento: { status: '' },
+      entrega: { data: '', hora: '' }
+    }));
+
+    res.json({ pedidos });
+  } catch (err) {
+    console.error('Erro ao listar pedidos:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao listar pedidos.', details: err && err.message ? err.message : String(err) });
+    }
+  }
+});
+
+// rota para apagar pedido
+
+app.delete('/api/pedidos/:protocolo', authenticate, async (req, res) => {
+  try {
+    const { protocolo } = req.params;
+    // Primeiro, busca o ID do pedido
+    const pedidoRes = await pool.query('SELECT id FROM pedidos WHERE protocolo = $1', [protocolo]);
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    const pedidoId = pedidoRes.rows[0].id;
+    // Remove os combos associados primeiro (devido à foreign key)
+    await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
+    // Remove o pedido
+    await pool.query('DELETE FROM pedidos WHERE id = $1', [pedidoId]);
+    res.json({ message: 'Pedido excluído com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao excluir pedido:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao excluir pedido.', details: err && err.message ? err.message : String(err) });
+    }
+  }
+});
+
+//rota para buscar pedido por protocolo - inclui valor_adiantado, usuario e observacao
+app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
+  try {
+    const { protocolo } = req.params;
+    const pedidoRes = await pool.query(`
+      SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em,
+             p.valor_adiantado, p.valor_adiantado_detalhes, p.usuario, p.observacao, p.cliente_id,
+             p.origem, p.origem_info,
+             c.nome as cliente_nome, c.cpf, c.endereco, c.telefone, c.email
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      WHERE p.protocolo = $1
+      LIMIT 1
+    `, [protocolo]);
+    if (pedidoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    const p = pedidoRes.rows[0];
+
+    // Buscar o último status do pedido
+    const statusRes = await pool.query(
+      `SELECT status FROM pedido_status WHERE protocolo = $1 ORDER BY data_hora DESC LIMIT 1`,
+      [protocolo]
+    );
+    const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : '';
+
+    // Buscar combos e atos do pedido
+    const combosRes = await pool.query(`
+      SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
+             c.nome as combo_nome,
+             a.codigo as ato_codigo, a.descricao as ato_descricao, a.valor_final
+      FROM pedido_combos pc
+      LEFT JOIN combos c ON pc.combo_id = c.id
+      LEFT JOIN atos a ON pc.ato_id = a.id
+      WHERE pc.pedido_id = $1
+    `, [p.id]);
+    const combos = combosRes.rows.map(row => ({
+      combo_id: row.combo_id,
+      combo_nome: row.combo_nome,
+      ato_id: row.ato_id,
+      ato_codigo: row.ato_codigo,
+      ato_descricao: row.ato_descricao,
+      valor_final: row.valor_final,
+      quantidade: row.quantidade,
+      codigo_tributario: row.codigo_tributario
+    }));
+    let detalhes = [];
+    if (p.valor_adiantado_detalhes) {
+      try {
+        detalhes = JSON.parse(p.valor_adiantado_detalhes);
+      } catch (e) {
+        detalhes = [];
+      }
+    }
+    const pedido = {
+      protocolo: p.protocolo,
+      tipo: p.tipo,
+      descricao: p.descricao,
+      prazo: p.prazo,
+      criado_em: p.criado_em,
+      valor_adiantado: p.valor_adiantado,
+      valorAdiantadoDetalhes: detalhes,
+      usuario: p.usuario,
+      observacao: p.observacao,
+      origem: p.origem,
+      origemInfo: p.origem_info,
+      status: ultimoStatus,
+      cliente_id: p.cliente_id,
+      cliente: {
+        id: p.cliente_id,
+        nome: p.cliente_nome,
+        cpf: p.cpf,
+        endereco: p.endereco,
+        telefone: p.telefone,
+        email: p.email
+      },
+      combos,
+      execucao: { status: '' },
+      pagamento: { status: '' },
+      entrega: { data: '', hora: '' }
+    };
+    res.json({ pedido });
+  } catch (err) {
+    console.error('Erro ao buscar pedido:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro ao buscar pedido.', details: err && err.message ? err.message : String(err) });
+    }
+  }
+});
+
+//rota para obter lista dos pedidos com o ultimo status
+app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT status FROM pedido_status
+       WHERE protocolo = $1
+       ORDER BY data_hora DESC, id DESC
+       LIMIT 1`,
+      [protocolo]
+    );
+    if (result.rows.length > 0) {
+      res.json({ status: result.rows[0].status });
+    } else {
+      res.json({ status: '-' });
+    }
+  } catch (err) {
+    console.error('Erro ao buscar último status:', err);
+    res.status(500).json({ error: 'Erro ao buscar status' });
+  }
+});
+
+
+// rota para salvar o status do pedido
+// Certifique-se de importar ou definir o pool corretamente no topo do seu arquivo:
+// const { pool } = require('./db'); // ou conforme seu projeto
+
+app.post('/api/pedidos/:protocolo/status', async (req, res) => {
+  const { status, usuario } = req.body;
+  const protocolo = req.params.protocolo;
+  console.log('[STATUS API] Protocolo:', protocolo);
+  console.log('[STATUS API] Body:', req.body);
+  if (!status || !usuario) {
+    console.log('[STATUS API] Faltando status ou usuario');
+    return res.status(400).json({ error: 'Campos status e usuario são obrigatórios.' });
+  }
+  try {
+    console.log('[STATUS API] Executando INSERT em pedido_status');
+    const result = await pool.query(
+      'INSERT INTO pedido_status (protocolo, status, usuario, data_hora) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      [protocolo, status, usuario]
+    );
+    console.log('[STATUS API] INSERT result:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('[STATUS API] Erro ao salvar status:', err);
+    res.status(500).json({ error: 'Erro ao salvar status' });
+  }
+});
+
+//rota para buscar recibo do pedido
+app.get('/api/recibo/:protocolo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    console.log(`[RECIBO] Buscando recibo para protocolo: ${protocolo}`);
+    const pedidoRes = await pool.query(
+      `SELECT 
+         p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
+         p.valor_adiantado_detalhes,
+         c.nome as cliente_nome, c.telefone,
+         u.serventia as usuario_serventia,
+         s.nome_abreviado, s.nome_completo, s.endereco, s.cnpj, 
+         s.telefone as telefone_cartorio, s.email, s.whatsapp, s.cns
+       FROM pedidos p
+       LEFT JOIN clientes c ON p.cliente_id = c.id
+       LEFT JOIN users u ON p.usuario = u.nome
+       LEFT JOIN serventia s ON s.nome_abreviado = u.serventia
+       WHERE p.protocolo = $1`, [protocolo]
+    );
+    console.log('[RECIBO] Resultado do SELECT:', pedidoRes.rows);
+    if (pedidoRes.rows.length === 0) {
+      console.log('[RECIBO] Pedido não encontrado para protocolo:', protocolo);
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    const pedido = pedidoRes.rows[0];
+    console.log('[RECIBO] valor_adiantado_detalhes (raw):', pedido.valor_adiantado_detalhes);
+    let detalhes = [];
+    if (pedido.valor_adiantado_detalhes) {
+      try {
+        detalhes = JSON.parse(pedido.valor_adiantado_detalhes);
+        console.log('[RECIBO] valor_adiantado_detalhes (parsed):', detalhes);
+      } catch (e) {
+        console.log('[RECIBO] Erro ao fazer parse de valor_adiantado_detalhes:', e);
+        detalhes = [];
+      }
+    }
+    res.json({
+      pedido: {
+        protocolo: pedido.protocolo,
+        descricao: pedido.descricao,
+        criado_em: pedido.criado_em,
+        valorAdiantadoDetalhes: detalhes,
+        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
+        serventia: {
+          nome_abreviado: pedido.nome_abreviado,
+          nome_completo: pedido.nome_completo,
+          endereco: pedido.endereco,
+          cnpj: pedido.cnpj,
+          telefone: pedido.telefone_cartorio,
+          email: pedido.email,
+          whatsapp: pedido.whatsapp,
+          cns: pedido.cns
+        }
+      }
+    });
+  } catch (err) {
+    console.log('[RECIBO] Erro ao buscar pedido:', err);
+    res.status(500).json({ error: 'Erro ao buscar pedido.' });
+  }
+});
+
+// Buscar todas as conferências de um protocolo
+app.get('/api/conferencias', async (req, res) => {
+  try {
+    const { protocolo } = req.query;
+    if (!protocolo) return res.status(400).json({ error: 'Protocolo obrigatório' });
+    
+    const result = await pool.query(
+      'SELECT * FROM conferencias WHERE protocolo = $1 ORDER BY data_hora DESC',
+      [protocolo]
+    );
+    
+    res.json({ conferencias: result.rows });
+  } catch (error) {
+    console.error('Erro ao buscar conferências:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Adicionar uma nova conferência
+app.post('/api/conferencias', async (req, res) => {
+  try {
+    const { protocolo, usuario, status, observacao } = req.body;
+    if (!protocolo || !usuario || !status) {
+      return res.status(400).json({ error: 'Campos obrigatórios: protocolo, usuario, status' });
+    }
+    
+    const result = await pool.query(
+      'INSERT INTO conferencias (protocolo, usuario, status, observacao, data_hora) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+      [protocolo, usuario, status, observacao]
+    );
+    
+    res.status(201).json({ conferencia: result.rows[0] });
+  } catch (error) {
+    console.error('Erro ao criar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Atualizar uma conferência existente (PUT)
+app.put('/api/conferencias/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, observacao } = req.body;
+    
+    const result = await pool.query(
+      'UPDATE conferencias SET status = COALESCE($1, status), observacao = COALESCE($2, observacao) WHERE id = $3 RETURNING *',
+      [status, observacao, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conferência não encontrada' });
+    }
+    
+    res.json({ conferencia: result.rows[0] });
+  } catch (error) {
+    console.error('Erro ao atualizar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Apagar uma conferência (DELETE)
+app.delete('/api/conferencias/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM conferencias WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conferência não encontrada' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao deletar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+
+//rota para listar combos
+app.get('/api/combos', async (req, res) => {
+  try {
+    const combos = await pool.query(`
+      SELECT c.id, c.nome, 
+        COALESCE(json_agg(json_build_object('id', a.id, 'codigo', a.codigo, 'descricao', a.descricao)) FILTER (WHERE a.id IS NOT NULL), '[]') AS atos
+      FROM combos c
+      LEFT JOIN combo_atos ca ON ca.combo_id = c.id
+      LEFT JOIN atos a ON ca.ato_id = a.id
+      GROUP BY c.id
+      ORDER BY c.id
+    `);
+    res.json({ combos: combos.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar combos.' });
+  }
+});
+
+// Buscar clientes
+app.get('/api/clientes', async (req, res) => {
+  const search = req.query.search || '';
+  const result = await pool.query(
+    `SELECT * FROM clientes
+     WHERE nome ILIKE $1 OR cpf ILIKE $1
+     ORDER BY nome LIMIT 10`,
+    [`%${search}%`]
+  );
+  res.json({ clientes: result.rows });
+});
+
+// Salvar novo cliente
+app.post('/api/clientes', async (req, res) => {
+  const { nome, cpf, endereco, telefone, email } = req.body;
+  const result = await pool.query(
+    `INSERT INTO clientes (nome, cpf, endereco, telefone, email)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [nome, cpf, endereco, telefone, email]
+  );
+  res.json(result.rows[0]);
+});
+
+// Apagar cliente
+app.delete('/api/clientes/:id', async (req, res) => {
+  const { id } = req.params;
+  await pool.query('DELETE FROM clientes WHERE id = $1', [id]);
+  res.json({ success: true });
+});
+
 // Middleware global para erros não tratados
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
@@ -1409,4 +2337,4 @@ app.use((err, req, res, next) => {
   }
 });
 
-module.exports = app;
+module.exports = router;
