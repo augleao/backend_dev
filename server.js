@@ -1943,6 +1943,7 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
   try {
     const pedidosRes = await pool.query(`
       SELECT p.id, p.protocolo, p.tipo, p.descricao, p.prazo, p.criado_em, 
+             p.valor_adiantado, p.valor_adiantado_detalhes, p.usuario, p.observacao,
              p.origem, p.origem_info,
              c.nome as cliente_nome
       FROM pedidos p
@@ -1950,20 +1951,45 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
       ORDER BY p.id DESC
     `);
     console.log('pedidos listados no DB:', pedidosRes);
+    console.log('[DEBUG] Primeiro pedido raw:', pedidosRes.rows[0]);
+    console.log('[DEBUG] valor_adiantado_detalhes do primeiro pedido:', pedidosRes.rows[0]?.valor_adiantado_detalhes);
+    console.log('[DEBUG] Tipo do valor_adiantado_detalhes:', typeof pedidosRes.rows[0]?.valor_adiantado_detalhes);
 
-    const pedidos = pedidosRes.rows.map(p => ({
-      protocolo: p.protocolo,
-      tipo: p.tipo,
-      cliente: { nome: p.cliente_nome },
-      prazo: p.prazo,
-      criado_em: p.criado_em,
-      descricao: p.descricao,
-      origem: p.origem,
-      origemInfo: p.origem_info,
-      execucao: { status: '' },
-      pagamento: { status: '' },
-      entrega: { data: '', hora: '' }
-    }));
+    const pedidos = pedidosRes.rows.map(p => {
+      // Processar valor_adiantado_detalhes
+      let valorAdiantadoDetalhes = [];
+      if (p.valor_adiantado_detalhes) {
+        try {
+          // Como é JSONB, pode vir já como objeto ou string
+          if (typeof p.valor_adiantado_detalhes === 'object') {
+            valorAdiantadoDetalhes = p.valor_adiantado_detalhes;
+          } else if (typeof p.valor_adiantado_detalhes === 'string') {
+            valorAdiantadoDetalhes = JSON.parse(p.valor_adiantado_detalhes);
+          }
+        } catch (e) {
+          console.error('Erro ao processar valor_adiantado_detalhes:', e);
+          valorAdiantadoDetalhes = [];
+        }
+      }
+      
+      return {
+        protocolo: p.protocolo,
+        tipo: p.tipo,
+        cliente: { nome: p.cliente_nome },
+        prazo: p.prazo,
+        criado_em: p.criado_em,
+        descricao: p.descricao,
+        valor_adiantado: p.valor_adiantado,
+        valorAdiantadoDetalhes: valorAdiantadoDetalhes,
+        usuario: p.usuario,
+        observacao: p.observacao,
+        origem: p.origem,
+        origemInfo: p.origem_info,
+        execucao: { status: '' },
+        pagamento: { status: '' },
+        entrega: { data: '', hora: '' }
+      };
+    });
 
     res.json({ pedidos });
   } catch (err) {
@@ -2047,8 +2073,14 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     let detalhes = [];
     if (p.valor_adiantado_detalhes) {
       try {
-        detalhes = JSON.parse(p.valor_adiantado_detalhes);
+        // Como é JSONB, pode vir já como objeto ou string
+        if (typeof p.valor_adiantado_detalhes === 'object') {
+          detalhes = p.valor_adiantado_detalhes;
+        } else if (typeof p.valor_adiantado_detalhes === 'string') {
+          detalhes = JSON.parse(p.valor_adiantado_detalhes);
+        }
       } catch (e) {
+        console.error('Erro ao processar valor_adiantado_detalhes:', e);
         detalhes = [];
       }
     }
@@ -2163,16 +2195,30 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
     const pedido = pedidoRes.rows[0];
+    console.log('[RECIBO] Campos retornados:', Object.keys(pedido));
     console.log('[RECIBO] valor_adiantado_detalhes (raw):', pedido.valor_adiantado_detalhes);
+    console.log('[RECIBO] Tipo do valor_adiantado_detalhes:', typeof pedido.valor_adiantado_detalhes);
+    
     let detalhes = [];
+    
+    // Como é JSONB, pode vir já como objeto ou string
     if (pedido.valor_adiantado_detalhes) {
-      try {
-        detalhes = JSON.parse(pedido.valor_adiantado_detalhes);
-        console.log('[RECIBO] valor_adiantado_detalhes (parsed):', detalhes);
-      } catch (e) {
-        console.log('[RECIBO] Erro ao fazer parse de valor_adiantado_detalhes:', e);
-        detalhes = [];
+      if (typeof pedido.valor_adiantado_detalhes === 'object') {
+        // Já é um objeto (JSONB retorna como objeto)
+        detalhes = pedido.valor_adiantado_detalhes;
+        console.log('[RECIBO] valor_adiantado_detalhes já é objeto:', detalhes);
+      } else if (typeof pedido.valor_adiantado_detalhes === 'string') {
+        // É string, precisa fazer parse
+        try {
+          detalhes = JSON.parse(pedido.valor_adiantado_detalhes);
+          console.log('[RECIBO] valor_adiantado_detalhes parseado:', detalhes);
+        } catch (e) {
+          console.log('[RECIBO] Erro ao fazer parse de valor_adiantado_detalhes:', e);
+          detalhes = [];
+        }
       }
+    } else {
+      console.log('[RECIBO] valor_adiantado_detalhes está null/undefined/empty');
     }
     res.json({
       pedido: {
