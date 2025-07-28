@@ -8,7 +8,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
-const { Sequelize, DataTypes } = require('sequelize');
 const app = express();
 //const port = process.env.PORT || 3001;
 const pool = new Pool({
@@ -16,55 +15,27 @@ const pool = new Pool({
   // outras configs se necessário
 });
 
-// Configuração do Sequelize
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  logging: false, // Desabilita logs SQL
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
+// Criar tabela de conferências se não existir
+const createConferenciasTable = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conferencias (
+        id SERIAL PRIMARY KEY,
+        protocolo VARCHAR(255) NOT NULL,
+        usuario VARCHAR(255) NOT NULL,
+        status VARCHAR(255) NOT NULL,
+        observacao TEXT,
+        data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela conferencias verificada/criada com sucesso');
+  } catch (error) {
+    console.error('Erro ao criar tabela conferencias:', error);
   }
-});
+};
 
-// Modelo Conferencia
-const Conferencia = sequelize.define('Conferencia', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  protocolo: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  usuario: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  observacao: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  dataHora: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  }
-}, {
-  tableName: 'conferencias',
-  timestamps: false
-});
-
-// Sincronizar modelo com banco (criar tabela se não existir)
-sequelize.sync({ alter: true }).catch(err => {
-  console.error('Erro ao sincronizar modelo Conferencia:', err);
-});
+// Executar criação da tabela
+createConferenciasTable();
 
 //const express = require('express');
 //const router = express.Router();
@@ -1430,9 +1401,6 @@ app.listen(port, () => {
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
 
-const codigosGratuitosRouter = require('./routes/codigosGratuitos');
-app.use('/api/codigos-gratuitos', codigosGratuitosRouter);
-
 // Middleware para autenticação de token
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -2237,12 +2205,12 @@ app.get('/api/conferencias', async (req, res) => {
     const { protocolo } = req.query;
     if (!protocolo) return res.status(400).json({ error: 'Protocolo obrigatório' });
     
-    const conferencias = await Conferencia.findAll({
-      where: { protocolo },
-      order: [['dataHora', 'DESC']]
-    });
+    const result = await pool.query(
+      'SELECT * FROM conferencias WHERE protocolo = $1 ORDER BY data_hora DESC',
+      [protocolo]
+    );
     
-    res.json({ conferencias });
+    res.json({ conferencias: result.rows });
   } catch (error) {
     console.error('Erro ao buscar conferências:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -2257,15 +2225,12 @@ app.post('/api/conferencias', async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios: protocolo, usuario, status' });
     }
     
-    const conferencia = await Conferencia.create({
-      protocolo,
-      usuario,
-      status,
-      observacao,
-      dataHora: new Date()
-    });
+    const result = await pool.query(
+      'INSERT INTO conferencias (protocolo, usuario, status, observacao, data_hora) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+      [protocolo, usuario, status, observacao]
+    );
     
-    res.status(201).json({ conferencia });
+    res.status(201).json({ conferencia: result.rows[0] });
   } catch (error) {
     console.error('Erro ao criar conferência:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -2278,14 +2243,16 @@ app.put('/api/conferencias/:id', async (req, res) => {
     const { id } = req.params;
     const { status, observacao } = req.body;
     
-    const conferencia = await Conferencia.findByPk(id);
-    if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+    const result = await pool.query(
+      'UPDATE conferencias SET status = COALESCE($1, status), observacao = COALESCE($2, observacao) WHERE id = $3 RETURNING *',
+      [status, observacao, id]
+    );
     
-    conferencia.status = status || conferencia.status;
-    conferencia.observacao = observacao || conferencia.observacao;
-    await conferencia.save();
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conferência não encontrada' });
+    }
     
-    res.json({ conferencia });
+    res.json({ conferencia: result.rows[0] });
   } catch (error) {
     console.error('Erro ao atualizar conferência:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -2297,10 +2264,15 @@ app.delete('/api/conferencias/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const conferencia = await Conferencia.findByPk(id);
-    if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+    const result = await pool.query(
+      'DELETE FROM conferencias WHERE id = $1 RETURNING *',
+      [id]
+    );
     
-    await conferencia.destroy();
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conferência não encontrada' });
+    }
+    
     res.json({ success: true });
   } catch (error) {
     console.error('Erro ao deletar conferência:', error);
