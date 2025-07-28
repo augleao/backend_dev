@@ -34,6 +34,7 @@ const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const importarAtosRoutes = require('./routes/importarAtos');
 const fechamentosRoutes = require('./routes/fechamentos');
+const { Conferencia } = require('./models');
 //const atosTabelaRouter = require('./routes/atos-tabela');
 //const atosPraticadosRouter = require('./routes/atosPraticados');
 
