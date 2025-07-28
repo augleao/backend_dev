@@ -8,11 +8,62 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
+const { Sequelize, DataTypes } = require('sequelize');
 const app = express();
 //const port = process.env.PORT || 3001;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // outras configs se necessário
+});
+
+// Configuração do Sequelize
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  logging: false, // Desabilita logs SQL
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  }
+});
+
+// Modelo Conferencia
+const Conferencia = sequelize.define('Conferencia', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  protocolo: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  usuario: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  observacao: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  dataHora: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  tableName: 'conferencias',
+  timestamps: false
+});
+
+// Sincronizar modelo com banco (criar tabela se não existir)
+sequelize.sync({ alter: true }).catch(err => {
+  console.error('Erro ao sincronizar modelo Conferencia:', err);
 });
 
 //const express = require('express');
@@ -82,6 +133,9 @@ const corsOptions = {
     }
     return callback(null, true);
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   optionsSuccessStatus: 200
 };
 
@@ -2179,50 +2233,79 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
 
 // Buscar todas as conferências de um protocolo
 app.get('/api/conferencias', async (req, res) => {
-  const { protocolo } = req.query;
-  if (!protocolo) return res.status(400).json({ error: 'Protocolo obrigatório' });
-  const conferencias = await Conferencia.findAll({
-    where: { protocolo },
-    order: [['dataHora', 'DESC']]
-  });
-  res.json({ conferencias });
+  try {
+    const { protocolo } = req.query;
+    if (!protocolo) return res.status(400).json({ error: 'Protocolo obrigatório' });
+    
+    const conferencias = await Conferencia.findAll({
+      where: { protocolo },
+      order: [['dataHora', 'DESC']]
+    });
+    
+    res.json({ conferencias });
+  } catch (error) {
+    console.error('Erro ao buscar conferências:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Adicionar uma nova conferência
 app.post('/api/conferencias', async (req, res) => {
-  const { protocolo, usuario, status, observacao } = req.body;
-  if (!protocolo || !usuario || !status) {
-    return res.status(400).json({ error: 'Campos obrigatórios: protocolo, usuario, status' });
+  try {
+    const { protocolo, usuario, status, observacao } = req.body;
+    if (!protocolo || !usuario || !status) {
+      return res.status(400).json({ error: 'Campos obrigatórios: protocolo, usuario, status' });
+    }
+    
+    const conferencia = await Conferencia.create({
+      protocolo,
+      usuario,
+      status,
+      observacao,
+      dataHora: new Date()
+    });
+    
+    res.status(201).json({ conferencia });
+  } catch (error) {
+    console.error('Erro ao criar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
-  const conferencia = await Conferencia.create({
-    protocolo,
-    usuario,
-    status,
-    observacao,
-    dataHora: new Date()
-  });
-  res.status(201).json({ conferencia });
 });
 
 // Atualizar uma conferência existente (PUT)
 app.put('/api/conferencias/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status, observacao } = req.body;
-  const conferencia = await Conferencia.findByPk(id);
-  if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
-  conferencia.status = status || conferencia.status;
-  conferencia.observacao = observacao || conferencia.observacao;
-  await conferencia.save();
-  res.json({ conferencia });
+  try {
+    const { id } = req.params;
+    const { status, observacao } = req.body;
+    
+    const conferencia = await Conferencia.findByPk(id);
+    if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+    
+    conferencia.status = status || conferencia.status;
+    conferencia.observacao = observacao || conferencia.observacao;
+    await conferencia.save();
+    
+    res.json({ conferencia });
+  } catch (error) {
+    console.error('Erro ao atualizar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Apagar uma conferência (DELETE)
 app.delete('/api/conferencias/:id', async (req, res) => {
-  const { id } = req.params;
-  const conferencia = await Conferencia.findByPk(id);
-  if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
-  await conferencia.destroy();
-  res.json({ success: true });
+  try {
+    const { id } = req.params;
+    
+    const conferencia = await Conferencia.findByPk(id);
+    if (!conferencia) return res.status(404).json({ error: 'Conferência não encontrada' });
+    
+    await conferencia.destroy();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao deletar conferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 
