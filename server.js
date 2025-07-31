@@ -35,7 +35,7 @@ const createConferenciasTable = async () => {
 };
 
 // Executar criação da tabela
-createConferenciasTable();
+//createConferenciasTable();
 
 //const express = require('express');
 //const router = express.Router();
