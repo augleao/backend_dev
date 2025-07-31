@@ -2368,7 +2368,7 @@ const authenticateAdmin = async (req, res, next) => {
 };
 
 // GET /admin/render/services
-app.get('/admin/render/services', authenticateAdmin, async (req, res) => {
+app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
   try {
     const response = await fetch('https://api.render.com/v1/services', {
       headers: {
@@ -2399,7 +2399,7 @@ app.get('/admin/render/services', authenticateAdmin, async (req, res) => {
 });
 
 // POST /admin/render/services/:serviceId/backup
-app.post('/admin/render/services/:serviceId/backup', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/render/services/:serviceId/backup', authenticateAdmin, async (req, res) => {
   try {
     const { serviceId } = req.params;
     
@@ -2429,7 +2429,7 @@ app.post('/admin/render/services/:serviceId/backup', authenticateAdmin, async (r
 });
 
 // POST /admin/render/postgres/:postgresId/recovery
-app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
   try {
     const { postgresId } = req.params;
     const { timestamp } = req.body; // Opcional: timestamp específico para recovery
@@ -2463,7 +2463,7 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
 });
 
 // GET /admin/render/postgres/:postgresId/recovery
-app.get('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
+app.get('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
   try {
     const { postgresId } = req.params;
     
