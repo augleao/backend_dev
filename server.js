@@ -86,7 +86,7 @@ app.use(express.json());
 
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'rnd_lpmjz2ZhvcziHhY2sRioIAY6hgZk';
+const JWT_SECRET = process.env.JWT_SECRET || '7a3dfb677e3250bb4584e40d672a7229';
 //const jwt = require('jsonwebtoken');
 // CORS
 const allowedOrigins = [
@@ -2354,6 +2354,8 @@ const authenticateAdmin = async (req, res, next) => {
       return res.status(401).json({ message: 'Token não fornecido' });
     }
     
+    // Logar o valor do segredo JWT para depuração
+    console.log('JWT_SECRET em uso:', process.env.JWT_SECRET);
     // Verificar e decodificar o token
     const decoded = jwt.verify(token, JWT_SECRET);
     
