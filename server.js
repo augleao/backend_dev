@@ -86,8 +86,8 @@ app.use(express.json());
 
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'uma_chave_super_secreta';
-
+const JWT_SECRET = process.env.JWT_SECRET || 'rnd_lpmjz2ZhvcziHhY2sRioIAY6hgZk';
+//const jwt = require('jsonwebtoken');
 // CORS
 const allowedOrigins = [
   'https://frontend-0f8x.onrender.com',
@@ -2355,7 +2355,7 @@ const authenticateAdmin = async (req, res, next) => {
     }
     
     // Verificar e decodificar o token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // Por enquanto, assumir que qualquer token válido tem acesso de admin
     // Aqui você pode adicionar verificações mais específicas conforme necessário
