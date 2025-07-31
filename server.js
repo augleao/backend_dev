@@ -2385,11 +2385,12 @@ app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
       );
       res.json({ services: dbServices });
     } else {
+      let rawBody = await response.text();
       let errorData;
       try {
-        errorData = await response.json();
+        errorData = JSON.parse(rawBody);
       } catch (e) {
-        errorData = { raw: await response.text() };
+        errorData = { raw: rawBody };
       }
       res.status(response.status).json({ 
         message: 'Erro ao buscar serviços do Render', 
