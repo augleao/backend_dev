@@ -9,6 +9,8 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
+//const RENDER_API_KEY = process.env.RENDER_API_KEY;
+
 //const port = process.env.PORT || 3001;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -2470,6 +2472,36 @@ app.post('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, a
     }
   } catch (error) {
     console.error('Erro ao iniciar recovery:', error);
+    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
+  }
+});
+
+app.get('/api/admin/render/postgres', authenticateAdmin, async (req, res) => {
+  try {
+    const response = await fetch('https://api.render.com/v1/postgres', {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${RENDER_API_KEY}`
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      res.json({ bancos: data }); // data é um array de bancos postgres
+    } else {
+      let rawBody = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(rawBody);
+      } catch (e) {
+        errorData = { raw: rawBody };
+      }
+      res.status(response.status).json({ 
+        message: 'Erro ao buscar bancos postgres do Render', 
+        error: errorData 
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao buscar bancos postgres:', error);
     res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
   }
 });
