@@ -38,6 +38,8 @@ const dotenv = require('dotenv');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+// ...existing code...
+// (adicione a rota após a inicialização do app)
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
