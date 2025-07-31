@@ -2372,11 +2372,10 @@ const authenticateAdmin = async (req, res, next) => {
 // GET /admin/render/services
 app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
   try {
-    const RENDER_API_KEY = process.env.RENDER_API_KEY || 'rnd_lpmjz2ZhvcziHhY2sRioIAY6hgZk';
     const response = await fetch('https://api.render.com/v1/services', {
       headers: {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${RENDER_API_KEY}`
+        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`
       }
     });
     if (response.ok) {
