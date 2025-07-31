@@ -2380,6 +2380,7 @@ app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
     });
     if (response.ok) {
       const data = await response.json();
+      console.log('[RENDER][GET /services] Resposta:', JSON.stringify(data, null, 2));
       // Filtrar apenas serviços PostgreSQL
       const dbServices = data.filter(service => 
         service.type === 'postgresql' || service.type === 'database'
@@ -2387,6 +2388,7 @@ app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
       res.json({ services: dbServices });
     } else {
       let rawBody = await response.text();
+      console.log('[RENDER][GET /services] Erro resposta:', rawBody);
       let errorData;
       try {
         errorData = JSON.parse(rawBody);
@@ -2420,9 +2422,11 @@ app.post('/api/admin/render/services/:serviceId/backup', authenticateAdmin, asyn
     
     if (response.ok) {
       const data = await response.json();
+      console.log('[RENDER][POST /services/:serviceId/backup] Resposta:', JSON.stringify(data, null, 2));
       res.json({ message: 'Backup criado com sucesso', data });
     } else {
       const errorData = await response.json();
+      console.log('[RENDER][POST /services/:serviceId/backup] Erro resposta:', JSON.stringify(errorData, null, 2));
       res.status(response.status).json({ 
         message: 'Erro ao criar backup', 
         error: errorData 
@@ -2454,9 +2458,11 @@ app.post('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, a
     
     if (response.ok) {
       const data = await response.json();
+      console.log('[RENDER][POST /postgres/:postgresId/recovery] Resposta:', JSON.stringify(data, null, 2));
       res.json({ message: 'Recovery iniciado com sucesso', data });
     } else {
       const errorData = await response.json();
+      console.log('[RENDER][POST /postgres/:postgresId/recovery] Erro resposta:', JSON.stringify(errorData, null, 2));
       res.status(response.status).json({ 
         message: 'Erro ao iniciar recovery', 
         error: errorData 
@@ -2483,9 +2489,11 @@ app.get('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, as
     
     if (response.ok) {
       const data = await response.json();
+      console.log('[RENDER][GET /postgres/:postgresId/recovery] Resposta:', JSON.stringify(data, null, 2));
       res.json(data);
     } else {
       const errorData = await response.json();
+      console.log('[RENDER][GET /postgres/:postgresId/recovery] Erro resposta:', JSON.stringify(errorData, null, 2));
       res.status(response.status).json({ 
         message: 'Erro ao verificar status de recovery', 
         error: errorData 
