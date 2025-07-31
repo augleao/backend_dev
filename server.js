@@ -2370,23 +2370,27 @@ const authenticateAdmin = async (req, res, next) => {
 // GET /admin/render/services
 app.get('/api/admin/render/services', authenticateAdmin, async (req, res) => {
   try {
+    const RENDER_API_KEY = process.env.RENDER_API_KEY || 'rnd_lpmjz2ZhvcziHhY2sRioIAY6hgZk';
     const response = await fetch('https://api.render.com/v1/services', {
       headers: {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${process.env.RENDER_API_KEY}` // rnd_2iUOT7XH1HjT8TrH4T4Sv4pm92uS
+        'Authorization': `Bearer ${RENDER_API_KEY}`
       }
     });
-    
     if (response.ok) {
       const data = await response.json();
       // Filtrar apenas serviços PostgreSQL
       const dbServices = data.filter(service => 
         service.type === 'postgresql' || service.type === 'database'
       );
-      
       res.json({ services: dbServices });
     } else {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { raw: await response.text() };
+      }
       res.status(response.status).json({ 
         message: 'Erro ao buscar serviços do Render', 
         error: errorData 
