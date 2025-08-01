@@ -2470,7 +2470,36 @@ app.get('/api/admin/render/postgres', authenticateAdmin, async (req, res) => {
   }
 });
 
-
+app.get('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
+  const { postgresId } = req.params;
+  try {
+    const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/recovery`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      res.json(data);
+    } else {
+      let rawBody = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(rawBody);
+      } catch (e) {
+        errorData = { raw: rawBody };
+      }
+      res.status(response.status).json({ 
+        message: 'Erro ao buscar recovery info do banco Postgres', 
+        error: errorData 
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao buscar recovery info:', error);
+    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
+  }
+});
 
 
 // Buscar clientes
