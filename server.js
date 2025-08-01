@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
-//const RENDER_API_KEY = process.env.RENDER_API_KEY;
+const RENDER_API_KEY = process.env.RENDER_API_KEY;
 
 //const port = process.env.PORT || 3001;
 const pool = new Pool({
