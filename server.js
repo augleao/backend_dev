@@ -2501,6 +2501,37 @@ app.get('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, as
   }
 });
 
+app.get('/api/admin/render/postgres/:postgresId/exports', authenticateAdmin, async (req, res) => {
+  const { postgresId } = req.params;
+  try {
+    const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/export`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      res.json({ exports: data });
+    } else {
+      let rawBody = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(rawBody);
+      } catch (e) {
+        errorData = { raw: rawBody };
+      }
+      res.status(response.status).json({ 
+        message: 'Erro ao buscar exports do banco Postgres', 
+        error: errorData 
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao buscar exports:', error);
+    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
+  }
+});
+
 
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
