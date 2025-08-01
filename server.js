@@ -1,35 +1,3 @@
-// Rota para listar bancos PostgreSQL do Render
-app.get('/api/admin/render/postgres', authenticateAdmin, async (req, res) => {
-  try {
-    const response = await fetch('https://api.render.com/v1/postgres', {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`
-      }
-    });
-    if (response.ok) {
-      const data = await response.json();
-      console.log('[RENDER][GET /postgres] Resposta:', JSON.stringify(data, null, 2));
-      res.json({ bancos: data }); // data é um array de bancos postgres
-    } else {
-      let rawBody = await response.text();
-      console.log('[RENDER][GET /postgres] Erro resposta:', rawBody);
-      let errorData;
-      try {
-        errorData = JSON.parse(rawBody);
-      } catch (e) {
-        errorData = { raw: rawBody };
-      }
-      res.status(response.status).json({ 
-        message: 'Erro ao buscar bancos postgres do Render', 
-        error: errorData 
-      });
-    }
-  } catch (error) {
-    console.error('Erro ao buscar bancos postgres:', error);
-    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
-  }
-});
 const express = require('express');
 const multer = require('multer');
 const { Pool } = require('pg');
@@ -38,8 +6,6 @@ const dotenv = require('dotenv');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-// ...existing code...
-// (adicione a rota após a inicialização do app)
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
