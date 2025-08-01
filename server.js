@@ -2532,6 +2532,33 @@ app.get('/api/admin/render/postgres/:postgresId/exports', authenticateAdmin, asy
   }
 });
 
+//rota para disparaar backup automatico
+app.post('/admin/render/postgres/:postgresId/recovery', requireAdminAuth, async (req, res) => {
+  const { postgresId } = req.params;
+  const { restoreTime } = req.body;
+  if (!restoreTime) {
+    return res.status(400).json({ error: 'restoreTime é obrigatório' });
+  }
+  try {
+    const response = await fetch(`${RENDER_API_URL}/postgres/${postgresId}/recovery`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RENDER_API_KEY}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ restoreTime })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao disparar recovery', details: err.message });
+  }
+});
+
 
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
