@@ -2440,42 +2440,6 @@ app.post('/api/admin/render/services/:serviceId/backup', authenticateAdmin, asyn
   }
 });
 
-// POST /admin/render/postgres/:postgresId/recovery
-app.post('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
-  try {
-    const { postgresId } = req.params;
-    const { timestamp } = req.body; // Opcional: timestamp específico para recovery
-    
-    const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/recovery`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ...(timestamp && { timestamp }) // Incluir timestamp se fornecido
-      })
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('[RENDER][POST /postgres/:postgresId/recovery] Resposta:', JSON.stringify(data, null, 2));
-      res.json({ message: 'Recovery iniciado com sucesso', data });
-    } else {
-      const errorData = await response.json();
-      console.log('[RENDER][POST /postgres/:postgresId/recovery] Erro resposta:', JSON.stringify(errorData, null, 2));
-      res.status(response.status).json({ 
-        message: 'Erro ao iniciar recovery', 
-        error: errorData 
-      });
-    }
-  } catch (error) {
-    console.error('Erro ao iniciar recovery:', error);
-    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
-  }
-});
-
 app.get('/api/admin/render/postgres', authenticateAdmin, async (req, res) => {
   try {
     const response = await fetch('https://api.render.com/v1/postgres', {
@@ -2505,38 +2469,6 @@ app.get('/api/admin/render/postgres', authenticateAdmin, async (req, res) => {
     res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
   }
 });
-
-// GET /admin/render/postgres/:postgresId/recovery
-app.get('/api/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
-  try {
-    const { postgresId } = req.params;
-    
-    const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/recovery`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${process.env.RENDER_API_KEY}`
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('[RENDER][GET /postgres/:postgresId/recovery] Resposta:', JSON.stringify(data, null, 2));
-      res.json(data);
-    } else {
-      const errorData = await response.json();
-      console.log('[RENDER][GET /postgres/:postgresId/recovery] Erro resposta:', JSON.stringify(errorData, null, 2));
-      res.status(response.status).json({ 
-        message: 'Erro ao verificar status de recovery', 
-        error: errorData 
-      });
-    }
-  } catch (error) {
-    console.error('Erro ao verificar recovery:', error);
-    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
-  }
-});
-
 
 
 
