@@ -2533,7 +2533,7 @@ app.get('/api/admin/render/postgres/:postgresId/exports', authenticateAdmin, asy
 });
 
 //rota para disparaar backup automatico
-app.post('/admin/render/postgres/:postgresId/recovery', requireAdminAuth, async (req, res) => {
+app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
   const { postgresId } = req.params;
   const { restoreTime } = req.body;
   if (!restoreTime) {
