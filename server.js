@@ -2665,14 +2665,21 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 // Adicionar selo (upload de imagem)
 app.post('/admin/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
+  const { originalname, path } = req.file || {};
   console.log('[BACKEND] Recebido POST /admin/execucao-servico/:execucaoId/selo');
   console.log('[BACKEND] execucaoId:', execucaoId);
   console.log('[BACKEND] req.file:', req.file);
   console.log('[BACKEND] req.body:', req.body);
 
   try {
-    // 1. Realize o OCR na imagem (exemplo fictício)
+    if (!req.file) {
+      console.error('[BACKEND] Nenhum arquivo enviado!');
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    // 1. Realize o OCR na imagem
     const dadosExtraidos = await extrairDadosSeloPorOCR(path);
+    console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
     // 2. Salve os dados do selo no banco
     const result = await db.query(
@@ -2691,10 +2698,11 @@ app.post('/admin/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.s
       ]
     );
 
+    console.log('[BACKEND] Selo salvo:', result.rows[0]);
     // 3. Retorne os dados do selo salvo
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Erro ao processar selo:', err);
+    console.error('[BACKEND] Erro ao processar selo:', err);
     res.status(500).json({ error: 'Erro ao processar selo' });
   }
 });
