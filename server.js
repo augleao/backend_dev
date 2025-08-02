@@ -2560,7 +2560,7 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
 });
 
 // Criar execução de serviço
-app.post('/admin/execucao-servico', authenticateAdmin, async (req, res) => {
+app.post('/api/execucao-servico', authenticateAdmin, async (req, res) => {
   const { protocolo, usuario, data, observacoes } = req.body;
 
   if (!protocolo || !usuario) {
@@ -2583,7 +2583,7 @@ app.post('/admin/execucao-servico', authenticateAdmin, async (req, res) => {
 });
 
 // Buscar execução de serviço por protocolo
-app.get('/admin/execucao-servico/:protocolo', authenticateAdmin, async (req, res) => {
+app.get('/api/execucao-servico/:protocolo', authenticateAdmin, async (req, res) => {
   const { protocolo } = req.params;
 
   try {
@@ -2612,7 +2612,7 @@ app.get('/admin/execucao-servico/:protocolo', authenticateAdmin, async (req, res
 });
 
 // Atualizar execução de serviço
-app.put('/admin/execucao-servico/:id', authenticateAdmin, async (req, res) => {
+app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { data, observacoes, status } = req.body;
 
@@ -2638,7 +2638,7 @@ app.put('/admin/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Adicionar selo (upload de imagem)
-app.post('/admin/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
+app.post('/api/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
   const { originalname, path } = req.file;
 
@@ -2672,7 +2672,7 @@ app.post('/admin/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.s
 });
 
 // Listar selos de uma execução
-app.get('/admin/execucao-servico/:execucaoId/selos', authenticateAdmin, async (req, res) => {
+app.get('/api/execucao-servico/:execucaoId/selos', authenticateAdmin, async (req, res) => {
   const { execucaoId } = req.params;
   try {
     const result = await db.query(
@@ -2691,7 +2691,7 @@ app.get('/admin/execucao-servico/:execucaoId/selos', authenticateAdmin, async (r
 });
 
 // Remover selo
-app.delete('/admin/execucao-servico/:execucaoId/selo/:seloId', authenticateAdmin, async (req, res) => {
+app.delete('/api/execucao-servico/:execucaoId/selo/:seloId', authenticateAdmin, async (req, res) => {
   const { execucaoId, seloId } = req.params;
   try {
     const result = await db.query(
