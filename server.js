@@ -2585,15 +2585,131 @@ app.post('/admin/execucao-servico', authenticateAdmin, async (req, res) => {
 // Buscar execução de serviço por protocolo
 app.get('/admin/execucao-servico/:protocolo', authenticateAdmin, async (req, res) => {
   const { protocolo } = req.params;
-  // ... buscar no banco e retornar execucao_servico + selos vinculados
+
+  try {
+    // Busca a execução de serviço pelo protocolo
+    const execucaoResult = await db.query(
+      'SELECT * FROM execucao_servico WHERE protocolo = $1',
+      [protocolo]
+    );
+    if (execucaoResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Execução de serviço não encontrada' });
+    }
+    const execucao = execucaoResult.rows[0];
+
+    // Busca os selos vinculados a esta execução
+    const selosResult = await db.query(
+      'SELECT * FROM selos_execucao_servico WHERE execucao_servico_id = $1 ORDER BY id ASC',
+      [execucao.id]
+    );
+    execucao.selos = selosResult.rows;
+
+    return res.json(execucao);
+  } catch (err) {
+    console.error('Erro ao buscar execução de serviço:', err);
+    return res.status(500).json({ error: 'Erro ao buscar execução de serviço', details: err.message });
+  }
 });
 
 // Atualizar execução de serviço
-app.put('/admin/execucao-servico/:id', authenticateAdmin, async (req, res) => {
+app.put('/admin/execucao-servico/:id', autenticarAdmin, async (req, res) => {
   const { id } = req.params;
-  const { data, observacoes } = req.body;
-  // ... atualizar no banco
+  const { data, observacoes, status } = req.body;
+
+  try {
+    // Atualiza os campos permitidos
+    const result = await db.query(
+      `UPDATE execucao_servico
+       SET data = $1, observacoes = $2, status = $3
+       WHERE id = $4
+       RETURNING *`,
+      [data, observacoes, status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Execução não encontrada' });
+    }
+
+    res.json({ execucao: result.rows[0] });
+  } catch (err) {
+    console.error('Erro ao atualizar execução:', err);
+    res.status(500).json({ error: 'Erro ao atualizar execução' });
+  }
 });
+
+// Adicionar selo (upload de imagem)
+app.post('/admin/execucao-servico/:execucaoId/selo', autenticarAdmin, upload.single('imagem'), async (req, res) => {
+  const { execucaoId } = req.params;
+  const { originalname, path } = req.file;
+
+  try {
+    // 1. Realize o OCR na imagem (exemplo fictício)
+    const dadosExtraidos = await extrairDadosSeloPorOCR(path);
+
+    // 2. Salve os dados do selo no banco
+    const result = await db.query(
+      `INSERT INTO selos_execucao_servico
+        (execucao_id, imagem_url, selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        execucaoId,
+        `/uploads/${originalname}`, // ou gere uma URL pública conforme seu sistema
+        dadosExtraidos.seloConsulta,
+        dadosExtraidos.codigoSeguranca,
+        dadosExtraidos.qtdAtos,
+        dadosExtraidos.atosPraticadosPor,
+        dadosExtraidos.valores
+      ]
+    );
+
+    // 3. Retorne os dados do selo salvo
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao processar selo:', err);
+    res.status(500).json({ error: 'Erro ao processar selo' });
+  }
+});
+
+// Listar selos de uma execução
+app.get('/admin/execucao-servico/:execucaoId/selos', autenticarAdmin, async (req, res) => {
+  const { execucaoId } = req.params;
+  try {
+    const result = await db.query(
+      `SELECT id, imagem_url AS "imagemUrl", selo_consulta AS "seloConsulta", codigo_seguranca AS "codigoSeguranca",
+              qtd_atos AS "qtdAtos", atos_praticados_por AS "atosPraticadosPor", valores
+         FROM selos_execucao_servico
+        WHERE execucao_id = $1
+        ORDER BY id ASC`,
+      [execucaoId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar selos:', err);
+    res.status(500).json({ error: 'Erro ao buscar selos eletrônicos' });
+  }
+});
+
+// Remover selo
+app.delete('/admin/execucao-servico/:execucaoId/selo/:seloId', autenticarAdmin, async (req, res) => {
+  const { execucaoId, seloId } = req.params;
+  try {
+    const result = await db.query(
+      `DELETE FROM selos_execucao_servico
+        WHERE id = $1 AND execucao_id = $2
+        RETURNING *`,
+      [seloId, execucaoId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Selo não encontrado' });
+    }
+    res.json({ success: true, deleted: result.rows[0] });
+  } catch (err) {
+    console.error('Erro ao deletar selo:', err);
+    res.status(500).json({ error: 'Erro ao deletar selo eletrônico' });
+  }
+});
+
 
 // Rota para buscar histórico de status de um pedido
 app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, res) => {
