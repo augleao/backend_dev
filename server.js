@@ -2560,7 +2560,7 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
 });
 
 // Rota para buscar histórico de status de um pedido
-router.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, res) => {
+app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, res) => {
   const { protocolo } = req.params;
   try {
     const result = await pool.query(
