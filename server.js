@@ -2559,6 +2559,29 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
   }
 });
 
+// Rota para buscar histórico de status de um pedido
+router.get('/api/pedidos/:protocolo/historico-status', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT status, usuario AS responsavel, data_hora AS data_alteracao
+         FROM pedido_status
+        WHERE protocolo = $1
+        ORDER BY data_hora ASC`,
+      [protocolo]
+    );
+    // Adiciona campo observacoes vazio para compatibilidade com o frontend
+    const historico = result.rows.map(row => ({
+      ...row,
+      observacoes: ''
+    }));
+    res.json({ historico });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar histórico de status', details: err.message });
+  }
+});
+
+
 
 // Buscar clientes
 app.get('/api/clientes', async (req, res) => {
