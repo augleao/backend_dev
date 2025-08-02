@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
+const Tesseract = require('tesseract.js');
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 
 //const port = process.env.PORT || 3001;
@@ -35,6 +36,28 @@ const createConferenciasTable = async () => {
     console.error('Erro ao criar tabela conferencias:', error);
   }
 };
+
+async function extrairDadosSeloPorOCR(imagePath) {
+  console.log('[BACKEND] Iniciando OCR para:', imagePath);
+  const { data: { text } } = await Tesseract.recognize(imagePath, 'por');
+  console.log('[BACKEND] Texto extraído pelo OCR:', text);
+
+  // Exemplo de extração simples (ajuste conforme o layout do selo)
+  const seloConsulta = (text.match(/Selo Consulta[:\\s]*([A-Z0-9]+)/i) || [])[1] || '';
+  const codigoSeguranca = (text.match(/Código de Segurança[:\\s]*([A-Z0-9]+)/i) || [])[1] || '';
+  const qtdAtos = (text.match(/Qtd\\.? Atos[:\\s]*([0-9]+)/i) || [])[1] || '';
+  const atosPraticadosPor = (text.match(/Atos praticados por[:\\s]*([\\w\\s]+)/i) || [])[1] || '';
+  const valores = (text.match(/Valores[:\\s]*([\\d\\.,]+)/i) || [])[1] || '';
+
+  return {
+    seloConsulta,
+    codigoSeguranca,
+    qtdAtos,
+    atosPraticadosPor,
+    valores,
+    textoCompleto: text
+  };
+}
 
 // Executar criação da tabela
 //createConferenciasTable();
@@ -2559,6 +2582,8 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
   }
 });
 
+
+
 // Criar execução de serviço
 app.post('/api/execucao-servico', authenticateAdmin, async (req, res) => {
   const { protocolo, usuario, data, observacoes } = req.body;
@@ -2638,9 +2663,12 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Adicionar selo (upload de imagem)
-app.post('/api/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
+app.post('/admin/execucao-servico/:execucaoId/selo', autenticarAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
-  const { originalname, path } = req.file;
+  console.log('[BACKEND] Recebido POST /admin/execucao-servico/:execucaoId/selo');
+  console.log('[BACKEND] execucaoId:', execucaoId);
+  console.log('[BACKEND] req.file:', req.file);
+  console.log('[BACKEND] req.body:', req.body);
 
   try {
     // 1. Realize o OCR na imagem (exemplo fictício)
