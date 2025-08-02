@@ -2559,6 +2559,42 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
   }
 });
 
+// Criar execução de serviço
+app.post('/admin/execucao-servico', authenticateAdmin, async (req, res) => {
+  const { protocolo, usuario, data, observacoes } = req.body;
+
+  if (!protocolo || !usuario) {
+    return res.status(400).json({ error: 'protocolo e usuario são obrigatórios' });
+  }
+
+  try {
+    // Insere no banco
+    const result = await db.query(
+      `INSERT INTO execucao_servico (protocolo, usuario, data, observacoes)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [protocolo, usuario, data || new Date(), observacoes || null]
+    );
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao criar execução de serviço:', err);
+    return res.status(500).json({ error: 'Erro ao criar execução de serviço', details: err.message });
+  }
+});
+
+// Buscar execução de serviço por protocolo
+app.get('/admin/execucao-servico/:protocolo', authenticateAdmin, async (req, res) => {
+  const { protocolo } = req.params;
+  // ... buscar no banco e retornar execucao_servico + selos vinculados
+});
+
+// Atualizar execução de serviço
+app.put('/admin/execucao-servico/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { data, observacoes } = req.body;
+  // ... atualizar no banco
+});
+
 // Rota para buscar histórico de status de um pedido
 app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, res) => {
   const { protocolo } = req.params;
