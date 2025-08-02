@@ -2663,7 +2663,7 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Adicionar selo (upload de imagem)
-app.post('/admin/execucao-servico/:execucaoId/selo', autenticarAdmin, upload.single('imagem'), async (req, res) => {
+app.post('/admin/execucao-servico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
   console.log('[BACKEND] Recebido POST /admin/execucao-servico/:execucaoId/selo');
   console.log('[BACKEND] execucaoId:', execucaoId);
