@@ -2609,7 +2609,7 @@ app.post('/api/execucao-servico', authenticateAdmin, async (req, res) => {
        RETURNING *`,
       [protocolo, usuario, data || new Date(), observacoes || null]
     );
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json({ execucaoId: result.rows[0].id });
   } catch (err) {
     console.error('Erro ao criar execução de serviço:', err);
     return res.status(500).json({ error: 'Erro ao criar execução de serviço', details: err.message });
