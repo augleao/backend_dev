@@ -173,14 +173,22 @@ function processarTextoExtraido(texto) {
 // Configuração do multer para upload de arquivos (single)
 const upload = multer({
   dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    const allowed = [
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'image/bmp',
+      'image/gif',
+      'image/webp'
+    ];
+    if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Apenas arquivos PDF são permitidos!'));
+      cb(new Error('Apenas arquivos de imagem ou PDF são permitidos!'));
     }
-  },
+  }
 });
 
 // Configuração do multer para upload de múltiplos arquivos (tabelas 07 e 08)
