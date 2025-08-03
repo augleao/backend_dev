@@ -2672,9 +2672,48 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Adicionar selo (upload de imagem)
+
+// Função robusta para extrair dados do texto OCR do selo
+function extrairDadosSeloPorOCR(textoOuCaminho) {
+  // Se for caminho, leia o arquivo
+  const fs = require('fs');
+  let texto = textoOuCaminho;
+  if (fs.existsSync(textoOuCaminho)) {
+    texto = fs.readFileSync(textoOuCaminho, 'utf8');
+  }
+
+  // Selo de Consulta
+  const seloConsultaMatch = texto.match(/SELO DE CONSULTA:\s*([A-Z0-9]+)/i);
+  const seloConsulta = seloConsultaMatch ? seloConsultaMatch[1] : '';
+
+  // Código de Segurança
+  const codigoSegurancaMatch = texto.match(/CÓDIGO DE SEGURANÇA:\s*([\d,.]+)/i);
+  const codigoSeguranca = codigoSegurancaMatch ? codigoSegurancaMatch[1] : '';
+
+  // Quantidade de Atos
+  const qtdAtosMatch = texto.match(/Quantidade de atos praticados:\s*(\d+)/i);
+  const qtdAtos = qtdAtosMatch ? parseInt(qtdAtosMatch[1], 10) : null;
+
+  // Atos praticados por
+  const atosPraticadosPorMatch = texto.match(/Pratcado\(s\) por:\s*([^\n]+)/i);
+  const atosPraticadosPor = atosPraticadosPorMatch ? atosPraticadosPorMatch[1].trim() : '';
+
+  // Valores (linha que começa com - Emol.)
+  const valoresMatch = texto.match(/- Emol\.:\s*([^\n]+)/i);
+  const valores = valoresMatch ? valoresMatch[1].trim() : '';
+
+  return {
+    seloConsulta,
+    codigoSeguranca,
+    qtdAtos,
+    atosPraticadosPor,
+    valores,
+    textoCompleto: texto
+  };
+}
+
 app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
-  // Aceita execucaoId como string, apenas verifica se está presente e não é 'undefined' ou vazio
   if (!execucaoId || execucaoId === 'undefined' || execucaoId === '') {
     console.error('[BACKEND] execucaoId inválido:', execucaoId);
     return res.status(400).json({ error: 'execucaoId inválido' });
@@ -2692,8 +2731,8 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // 1. Realize o OCR na imagem
-    const dadosExtraidos = await extrairDadosSeloPorOCR(path);
+    // 1. Realize o OCR na imagem (a função já aceita caminho ou texto)
+    const dadosExtraidos = extrairDadosSeloPorOCR(path);
     console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
     // 2. Salve os dados do selo no banco
@@ -2704,7 +2743,7 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
        RETURNING *`,
       [
         execucaoId,
-        `/uploads/${originalname}`, // ou gere uma URL pública conforme seu sistema
+        `/uploads/${originalname}`,
         dadosExtraidos.seloConsulta,
         dadosExtraidos.codigoSeguranca,
         dadosExtraidos.qtdAtos,
@@ -2714,7 +2753,6 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
     );
 
     console.log('[BACKEND] Selo salvo:', result.rows[0]);
-    // 3. Retorne os dados do selo salvo
     res.json(result.rows[0]);
   } catch (err) {
     console.error('[BACKEND] Erro ao processar selo:', err);
