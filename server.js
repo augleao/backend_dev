@@ -2674,7 +2674,8 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 // Adicionar selo (upload de imagem)
 app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
-  if (!execucaoId || execucaoId === 'undefined' || isNaN(Number(execucaoId))) {
+  // Aceita execucaoId como string, apenas verifica se está presente e não é 'undefined' ou vazio
+  if (!execucaoId || execucaoId === 'undefined' || execucaoId === '') {
     console.error('[BACKEND] execucaoId inválido:', execucaoId);
     return res.status(400).json({ error: 'execucaoId inválido' });
   }
