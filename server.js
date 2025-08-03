@@ -2690,7 +2690,7 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
     console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
     // 2. Salve os dados do selo no banco
-    const result = await db.query(
+    const result = await pool.query(
       `INSERT INTO selos_execucao_servico
         (execucao_id, imagem_url, selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
