@@ -1952,6 +1952,7 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
       for (const combo of combos) {
         await pool.query(`
           INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
+
           VALUES ($1, $2, $3, $4, $5)
         `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
       }
@@ -2673,6 +2674,11 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 // Adicionar selo (upload de imagem)
 app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
+  if (!execucaoId || execucaoId === 'undefined' || isNaN(Number(execucaoId))) {
+    console.error('[BACKEND] execucaoId inválido:', execucaoId);
+    return res.status(400).json({ error: 'execucaoId inválido' });
+  }
+
   const { originalname, path } = req.file || {};
   console.log('[BACKEND] Recebido POST /admin/execucao-servico/:execucaoId/selo');
   console.log('[BACKEND] execucaoId:', execucaoId);
