@@ -2603,7 +2603,7 @@ app.post('/api/execucao-servico', authenticateAdmin, async (req, res) => {
 
   try {
     // Insere no banco
-    const result = await db.query(
+    const result = await pool.query(
       `INSERT INTO execucao_servico (protocolo, usuario, data, observacoes)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
@@ -2622,7 +2622,7 @@ app.get('/api/execucao-servico/:protocolo', authenticateAdmin, async (req, res) 
 
   try {
     // Busca a execução de serviço pelo protocolo
-    const execucaoResult = await db.query(
+    const execucaoResult = await pool.query(
       'SELECT * FROM execucao_servico WHERE protocolo = $1',
       [protocolo]
     );
@@ -2632,7 +2632,7 @@ app.get('/api/execucao-servico/:protocolo', authenticateAdmin, async (req, res) 
     const execucao = execucaoResult.rows[0];
 
     // Busca os selos vinculados a esta execução
-    const selosResult = await db.query(
+    const selosResult = await pool.query(
       'SELECT * FROM selos_execucao_servico WHERE execucao_servico_id = $1 ORDER BY id ASC',
       [execucao.id]
     );
@@ -2652,7 +2652,7 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
 
   try {
     // Atualiza os campos permitidos
-    const result = await db.query(
+    const result = await pool.query(
       `UPDATE execucao_servico
        SET data = $1, observacoes = $2, status = $3
        WHERE id = $4
@@ -2764,7 +2764,7 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
 app.get('/api/execucao-servico/:execucaoId/selos', authenticateAdmin, async (req, res) => {
   const { execucaoId } = req.params;
   try {
-    const result = await db.query(
+    const result = await pool.query(
       `SELECT id, imagem_url AS "imagemUrl", selo_consulta AS "seloConsulta", codigo_seguranca AS "codigoSeguranca",
               qtd_atos AS "qtdAtos", atos_praticados_por AS "atosPraticadosPor", valores
          FROM selos_execucao_servico
@@ -2783,7 +2783,7 @@ app.get('/api/execucao-servico/:execucaoId/selos', authenticateAdmin, async (req
 app.delete('/api/execucao-servico/:execucaoId/selo/:seloId', authenticateAdmin, async (req, res) => {
   const { execucaoId, seloId } = req.params;
   try {
-    const result = await db.query(
+    const result = await pool.query(
       `DELETE FROM selos_execucao_servico
         WHERE id = $1 AND execucao_id = $2
         RETURNING *`,
