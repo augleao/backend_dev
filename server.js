@@ -2796,7 +2796,7 @@ app.delete('/api/execucao-servico/:execucaoId/selo/:seloId', authenticateAdmin, 
   try {
     const result = await pool.query(
       `DELETE FROM selos_execucao_servico
-        WHERE id = $1 AND execucao_id = $2
+        WHERE id = $1 AND execucao_servico_id = $2
         RETURNING *`,
       [seloId, execucaoId]
     );
