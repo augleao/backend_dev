@@ -2599,6 +2599,7 @@ app.post('/api/admin/render/postgres/:postgresId/export', authenticateAdmin, asy
     return res.status(500).json({ error: 'RENDER_API_KEY não configurado no backend.' });
   }
   try {
+    console.log('[EXPORT][POSTGRES] Iniciando exportação para postgresId:', postgresId);
     const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/export`, {
       method: 'POST',
       headers: {
@@ -2613,12 +2614,15 @@ app.post('/api/admin/render/postgres/:postgresId/export', authenticateAdmin, asy
     } catch (e) {
       data = { raw: text };
     }
+    console.log('[EXPORT][POSTGRES] Status:', response.status);
+    console.log('[EXPORT][POSTGRES] Resposta:', data);
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
     return res.json(data);
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao solicitar exportação para Render.', details: err.message });
+    console.error('[EXPORT][POSTGRES] Erro ao solicitar exportação:', err);
+    return res.status(500).json({ message: 'internal server error', details: err.message });
   }
 });
 
