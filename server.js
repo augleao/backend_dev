@@ -2592,7 +2592,7 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
 });
 
 // POST /admin/render/postgres/:postgresId/export
-app.post('/admin/render/postgres/:postgresId/export', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/render/postgres/:postgresId/export', authenticateAdmin, async (req, res) => {
   const { postgresId } = req.params;
   const RENDER_API_KEY = process.env.RENDER_API_KEY;
   if (!RENDER_API_KEY) {
