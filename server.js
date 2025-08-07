@@ -2712,6 +2712,12 @@ function extrairDadosSeloPorOCR(textoOuCaminho) {
   };
 }
 
+app.get('/selos-execucao-servico/:protocolo', authenticateAdmin,async (req, res) => {
+  const { protocolo } = req.params;
+  const result = await db.query('SELECT * FROM selos_execucao_servico WHERE execucao_servico_id = $1 ORDER BY criado_em DESC', [protocolo]);
+  res.json({ selos: result.rows });
+});
+
 app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
   if (!execucaoId || execucaoId === 'undefined' || execucaoId === '') {
