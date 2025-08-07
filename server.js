@@ -2591,6 +2591,32 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
   }
 });
 
+// POST /admin/render/postgres/:postgresId/export
+app.post('/admin/render/postgres/:postgresId/export', authenticateAdmin, async (req, res) => {
+  const { postgresId } = req.params;
+  const RENDER_API_KEY = process.env.RENDER_API_KEY;
+  if (!RENDER_API_KEY) {
+    return res.status(500).json({ error: 'RENDER_API_KEY não configurado no backend.' });
+  }
+  try {
+    const response = await fetch(`https://api.render.com/v1/postgres/${postgresId}/export`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RENDER_API_KEY}`,
+        'Accept': 'application/json'
+      }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao solicitar exportação para Render.', details: err.message });
+  }
+});
+
+module.exports = router;
 
 
 // Criar execução de serviço
