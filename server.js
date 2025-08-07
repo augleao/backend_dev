@@ -2731,11 +2731,17 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // 1. Realize o OCR na imagem (a função já aceita caminho ou texto)
-    const dadosExtraidos = extrairDadosSeloPorOCR(path);
+    // 1. Realize o OCR na imagem usando tesseract.js
+    const Tesseract = require('tesseract.js');
+    const ocrResult = await Tesseract.recognize(path, 'por');
+    const textoOCR = ocrResult.data.text;
+    console.log('[BACKEND] Texto extraído do OCR:', textoOCR);
+
+    // 2. Extraia os dados do texto OCR
+    const dadosExtraidos = extrairDadosSeloPorOCR(textoOCR);
     console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
-    // 2. Salve os dados do selo no banco
+    // 3. Salve os dados do selo no banco
     const result = await pool.query(
       `INSERT INTO selos_execucao_servico
         (execucao_servico_id, imagem_url, selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores)
