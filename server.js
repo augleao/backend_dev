@@ -2779,7 +2779,7 @@ app.get('/api/execucao-servico/:execucaoId/selos', authenticateAdmin, async (req
       `SELECT id, imagem_url AS "imagemUrl", selo_consulta AS "seloConsulta", codigo_seguranca AS "codigoSeguranca",
               qtd_atos AS "qtdAtos", atos_praticados_por AS "atosPraticadosPor", valores
          FROM selos_execucao_servico
-        WHERE execucao_id = $1
+  WHERE execucao_servico_id = $1
         ORDER BY id ASC`,
       [execucaoId]
     );
