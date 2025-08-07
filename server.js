@@ -2747,15 +2747,14 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
     const dadosExtraidos = extrairDadosSeloPorOCR(textoOCR);
     console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
-    // 3. Salve os dados do selo no banco
+    // 3. Salve apenas os dados extraídos do OCR no banco (sem imagem_url)
     const result = await pool.query(
       `INSERT INTO selos_execucao_servico
-        (execucao_servico_id, imagem_url, selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (execucao_servico_id, selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
         execucaoId,
-        `/uploads/${originalname}`,
         dadosExtraidos.seloConsulta,
         dadosExtraidos.codigoSeguranca,
         dadosExtraidos.qtdAtos,
