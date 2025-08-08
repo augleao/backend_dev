@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
+const cron = require('node-cron');
 const Tesseract = require('tesseract.js');
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 
@@ -36,6 +37,23 @@ const createConferenciasTable = async () => {
     console.error('Erro ao criar tabela conferencias:', error);
   }
 };
+
+cron.schedule('* * * * *', async () => {
+  const now = new Date();
+  const horaAtual = now.toTimeString().slice(0,5); // 'HH:MM'
+  try {
+    const { rows } = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
+    for (const row of rows) {
+      if (row.horario === horaAtual) {
+        // Dispara o backup (chame sua função ou endpoint interno)
+        await axios.post(`http://localhost:3000/api/${row.postgres_id}/export`);
+        // Opcional: log, notificação, etc.
+      }
+    }
+  } catch (err) {
+    console.error('Erro no agendamento de backup:', err);
+  }
+});
 
 async function extrairDadosSeloPorOCR(imagePath) {
   console.log('[BACKEND] Iniciando OCR para:', imagePath);
