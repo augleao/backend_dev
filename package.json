@@ -12,6 +12,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
+    "node-cron": "^4.2.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^3.11.174",
     "pg": "^8.16.0",
