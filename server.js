@@ -2869,7 +2869,7 @@ app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, r
 });
 
 // Buscar config de backup agendado
-app.get('/:postgresId/backup-agendado', async (req, res) => {
+app.get('/api/:postgresId/backup-agendado', async (req, res) => {
   const { postgresId } = req.params;
   try {
     const { rows } = await pool.query(
@@ -2884,7 +2884,7 @@ app.get('/:postgresId/backup-agendado', async (req, res) => {
 });
 
 // Criar/atualizar config de backup agendado
-app.post('/:postgresId/backup-agendado', async (req, res) => {
+app.post('/api/:postgresId/backup-agendado', async (req, res) => {
   const { postgresId } = req.params;
   const { horario, ativo } = req.body;
   try {
