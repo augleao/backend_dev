@@ -41,17 +41,49 @@ const createConferenciasTable = async () => {
 cron.schedule('* * * * *', async () => {
   const now = new Date();
   const horaAtual = now.toTimeString().slice(0,5); // 'HH:MM'
+  let rows = [];
+  let erroQuery = false;
   try {
-    const { rows } = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
-    for (const row of rows) {
-      if (row.horario === horaAtual) {
-        // Dispara o backup (chame sua função ou endpoint interno)
-        await axios.post(`http://localhost:3000/api/${row.postgres_id}/export`);
-        // Opcional: log, notificação, etc.
+    const result = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
+    rows = result.rows;
+  } catch (err) {
+    erroQuery = true;
+    console.error('Erro no agendamento de backup:', err);
+  }
+
+  // Se não conseguiu buscar do banco ou não há linhas válidas, faz fallback para 00:01
+  if (erroQuery || !rows.length) {
+    if (horaAtual === '00:01') {
+      console.log('[CRON][BACKUP] Fallback: disparando backup para todos os bancos ativos às 00:01');
+      try {
+        // Busca todos os postgres_id ativos (se possível)
+        let ids = [];
+        if (!erroQuery) {
+          ids = rows.map(r => r.postgres_id);
+        } else {
+          // Se nem conseguiu buscar, defina manualmente ou ignore
+          // ids = ['id1', 'id2'];
+        }
+        for (const postgresId of ids) {
+          await axios.post(`http://localhost:3000/api/${postgresId}/export`);
+        }
+      } catch (err) {
+        console.error('[CRON][BACKUP] Erro no fallback de backup:', err);
       }
     }
-  } catch (err) {
-    console.error('Erro no agendamento de backup:', err);
+    return;
+  }
+
+  // Comportamento normal: dispara backup conforme horário do banco
+  for (const row of rows) {
+    if (row.horario === horaAtual) {
+      try {
+        await axios.post(`http://localhost:3000/api/${row.postgres_id}/export`);
+        console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
+      } catch (err) {
+        console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
+      }
+    }
   }
 });
 
