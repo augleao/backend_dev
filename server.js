@@ -2586,7 +2586,9 @@ app.get('/api/admin/render/postgres/:postgresId/exports', authenticateAdmin, asy
 app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async (req, res) => {
   const { postgresId } = req.params;
   const { restoreTime } = req.body;
+  console.log('[RECOVERY][POSTGRES] Iniciando backup automático para postgresId:', postgresId, 'restoreTime:', restoreTime);
   if (!restoreTime) {
+    console.warn('[RECOVERY][POSTGRES] restoreTime não informado');
     return res.status(400).json({ error: 'restoreTime é obrigatório' });
   }
   try {
@@ -2599,12 +2601,21 @@ app.post('/admin/render/postgres/:postgresId/recovery', authenticateAdmin, async
       },
       body: JSON.stringify({ restoreTime })
     });
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (e) {
+      data = { raw: text };
+    }
+    console.log('[RECOVERY][POSTGRES] Status:', response.status);
+    console.log('[RECOVERY][POSTGRES] Resposta:', data);
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
     return res.json(data);
   } catch (err) {
+    console.error('[RECOVERY][POSTGRES] Erro ao disparar recovery:', err);
     return res.status(500).json({ error: 'Erro ao disparar recovery', details: err.message });
   }
 });
