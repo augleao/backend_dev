@@ -2930,6 +2930,17 @@ app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, r
   }
 });
 
+// Exemplo de rota para retornar dados completos da serventia
+app.get('/api/serventias/:id', async (req, res) => {
+  const { id } = req.params;
+  const result = await db.query(
+    `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE id = $1`,
+    [id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: 'Não encontrada' });
+  res.json(result.rows[0]);
+});
+
 // Buscar config de backup agendado
 app.get('/api/:postgresId/backup-agendado', async (req, res) => {
   const { postgresId } = req.params;
