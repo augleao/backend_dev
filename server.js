@@ -37,7 +37,7 @@ const createConferenciasTable = async () => {
   } catch (error) {
     // erro removido: logs só na api/serventias
   }
-};
+}
 
 cron.schedule('* * * * *', async () => {
   const now = new Date();
