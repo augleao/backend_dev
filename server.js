@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const app = express();
+const axios = require('axios');
 const cron = require('node-cron');
 const Tesseract = require('tesseract.js');
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
