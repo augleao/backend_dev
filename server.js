@@ -2942,7 +2942,7 @@ app.get('/api/serventias/:nome_abreviado', async (req, res) => {
   const { nome_abreviado } = req.params;
   console.log(`[API][serventias] Requisição recebida para nome_abreviado: ${nome_abreviado}`);
   try {
-    const result = await db.query(
+    const result = await pool.query(
       `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE LOWER(nome_abreviado) = LOWER($1)`,
       [nome_abreviado]
     );
