@@ -1946,12 +1946,12 @@ app.post('/api/admin/combos', async (req, res) => {
 });
 
 // Rota para criar pedido
-app.post('/api/pedidos', authenticate, async (req, res) => {
+app.post('/api/pedidos-criar', authenticate, async (req, res) => {
   try {
     const { 
-  protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, valorAdiantadoDetalhes, observacao, 
-  combos, usuario, origem, origemInfo 
-} = req.body;
+      protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, valorAdiantadoDetalhes, observacao, 
+      combos, usuario, origem, origemInfo 
+    } = req.body;
 
     console.log('[POST] /api/pedidos - dados recebidos:', {
       protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, observacao, 
@@ -1969,10 +1969,10 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         
         // Atualiza o pedido
         await pool.query(`
-  UPDATE pedidos 
-  SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10
-  WHERE id = $11
-`, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, pedidoId]);
+          UPDATE pedidos 
+          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10
+          WHERE id = $11
+        `, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, pedidoId]);
 
         // Remove combos antigos
         await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
@@ -1981,9 +1981,15 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
         if (Array.isArray(combos)) {
           for (const combo of combos) {
             await pool.query(`
-              INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
-              VALUES ($1, $2, $3, $4, $5)
-            `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+              INSERT INTO pedido_combos (
+                pedido_id, combo_id, ato_id, quantidade, codigo_tributario,
+                tipo_registro, nome_registrados, livro, folha, termo
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            `, [
+              pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario,
+              combo.tipo_registro || null, combo.nome_registrados || null, combo.livro || null, combo.folha || null, combo.termo || null
+            ]);
           }
         }
         
@@ -1999,20 +2005,25 @@ app.post('/api/pedidos', authenticate, async (req, res) => {
 
     // Criação do novo pedido com os novos campos
     const result = await pool.query(`
-  INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-  RETURNING id
-`, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo]);
+      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id
+    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo]);
     const pedidoId = result.rows[0].id;
 
     // Inserir combos se houver
     if (Array.isArray(combos)) {
       for (const combo of combos) {
         await pool.query(`
-          INSERT INTO pedido_combos (pedido_id, combo_id, ato_id, quantidade, codigo_tributario)
-
-          VALUES ($1, $2, $3, $4, $5)
-        `, [pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario]);
+          INSERT INTO pedido_combos (
+            pedido_id, combo_id, ato_id, quantidade, codigo_tributario,
+            tipo_registro, nome_registrados, livro, folha, termo
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `, [
+          pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario,
+          combo.tipo_registro || null, combo.nome_registrados || null, combo.livro || null, combo.folha || null, combo.termo || null
+        ]);
       }
     }
 
