@@ -35,10 +35,7 @@ const createConferenciasTable = async () => {
     `);
     console.log('Tabela conferencias verificada/criada com sucesso');
   } catch (error) {
-    console.error('Erro ao criar tabela conferencias:', error);
-    }
-  
-    console.log(`[API][serventias] Requisição recebida para id: ${id}`);
+    // erro removido: logs só na api/serventias
   }
 };
 
