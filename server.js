@@ -2942,18 +2942,28 @@ app.get('/api/serventias/:id', async (req, res) => {
   const { id } = req.params;
   console.log(`[API][serventias] Requisição recebida para id: ${id}`);
   try {
-    const result = await db.query(
-      `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE id = $1`,
-      [id]
-    );
+    let result;
+    if (!isNaN(Number(id))) {
+      // Busca por id numérico
+      result = await db.query(
+        `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE id = $1`,
+        [id]
+      );
+    } else {
+      // Busca por nome_abreviado (case insensitive)
+      result = await db.query(
+        `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE LOWER(nome_abreviado) = LOWER($1)`,
+        [id]
+      );
+    }
     console.log(`[API][serventias] Resultado da consulta:`, result.rows);
     if (result.rows.length === 0) {
-      console.warn(`[API][serventias] Nenhuma serventia encontrada para id: ${id}`);
+      console.warn(`[API][serventias] Nenhuma serventia encontrada para id/nome: ${id}`);
       return res.status(404).json({ error: 'Não encontrada' });
     }
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(`[API][serventias] Erro ao buscar serventia para id ${id}:`, err);
+    console.error(`[API][serventias] Erro ao buscar serventia para id/nome ${id}:`, err);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
