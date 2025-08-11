@@ -2153,9 +2153,10 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     );
     const ultimoStatus = statusRes.rows.length > 0 ? statusRes.rows[0].status : '';
 
-    // Buscar combos e atos do pedido
+    // Buscar combos e atos do pedido, incluindo campos extras
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
+             pc.tipo_registro, pc.nome_registrados, pc.livro, pc.folha, pc.termo,
              c.nome as combo_nome,
              a.codigo as ato_codigo, a.descricao as ato_descricao, a.valor_final
       FROM pedido_combos pc
@@ -2171,8 +2172,14 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       ato_descricao: row.ato_descricao,
       valor_final: row.valor_final,
       quantidade: row.quantidade,
-      codigo_tributario: row.codigo_tributario
+      codigo_tributario: row.codigo_tributario,
+      tipo_registro: row.tipo_registro,
+      nome_registrados: row.nome_registrados,
+      livro: row.livro,
+      folha: row.folha,
+      termo: row.termo
     }));
+
     let detalhes = [];
     if (p.valor_adiantado_detalhes) {
       try {
