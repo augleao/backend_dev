@@ -36,6 +36,9 @@ const createConferenciasTable = async () => {
     console.log('Tabela conferencias verificada/criada com sucesso');
   } catch (error) {
     console.error('Erro ao criar tabela conferencias:', error);
+    }
+  
+    console.log(`[API][serventias] Requisição recebida para id: ${id}`);
   }
 };
 
@@ -48,6 +51,7 @@ cron.schedule('* * * * *', async () => {
     const result = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
     rows = result.rows;
   } catch (err) {
+    console.warn(`[API][serventias] Nenhuma serventia encontrada para id: ${id}`);
     erroQuery = true;
     console.error('Erro no agendamento de backup:', err);
   }
@@ -57,6 +61,7 @@ cron.schedule('* * * * *', async () => {
     if (horaAtual === '00:01') {
       console.log('[CRON][BACKUP] Fallback: disparando backup para todos os bancos ativos às 00:01');
       try {
+    console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
         // Busca todos os postgres_id ativos (se possível)
         let ids = [];
         if (!erroQuery) {
@@ -68,6 +73,7 @@ cron.schedule('* * * * *', async () => {
         for (const postgresId of ids) {
           await axios.post(`http://localhost:3000/api/${postgresId}/export`);
         }
+    console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
         console.error('[CRON][BACKUP] Erro no fallback de backup:', err);
       }
@@ -79,6 +85,7 @@ cron.schedule('* * * * *', async () => {
   for (const row of rows) {
     if (row.horario === horaAtual) {
       try {
+          console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
         await axios.post(`http://localhost:3000/api/${row.postgres_id}/export`);
         console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
@@ -92,6 +99,9 @@ async function extrairDadosSeloPorOCR(imagePath) {
   console.log('[BACKEND] Iniciando OCR para:', imagePath);
   const { data: { text } } = await Tesseract.recognize(imagePath, 'por');
   console.log('[BACKEND] Texto extraído pelo OCR:', text);
+  
+  console.log('Tamanho do buffer recebido:', dataBuffer.length);
+  console.log('JWT_SECRET em uso:', process.env.JWT_SECRET);
 
   // Exemplo de extração simples (ajuste conforme o layout do selo)
   const seloConsulta = (text.match(/Selo Consulta[:\\s]*([A-Z0-9]+)/i) || [])[1] || '';
@@ -2933,12 +2943,22 @@ app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, r
 // Exemplo de rota para retornar dados completos da serventia
 app.get('/api/serventias/:id', async (req, res) => {
   const { id } = req.params;
-  const result = await db.query(
-    `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE id = $1`,
-    [id]
-  );
-  if (result.rows.length === 0) return res.status(404).json({ error: 'Não encontrada' });
-  res.json(result.rows[0]);
+  console.log(`[API][serventias] Requisição recebida para id: ${id}`);
+  try {
+    const result = await db.query(
+      `SELECT nome_completo, endereco, cnpj, telefone, email FROM serventia WHERE id = $1`,
+      [id]
+    );
+    console.log(`[API][serventias] Resultado da consulta:`, result.rows);
+    if (result.rows.length === 0) {
+      console.warn(`[API][serventias] Nenhuma serventia encontrada para id: ${id}`);
+      return res.status(404).json({ error: 'Não encontrada' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`[API][serventias] Erro ao buscar serventia para id ${id}:`, err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Buscar config de backup agendado
