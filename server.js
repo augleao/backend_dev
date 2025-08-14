@@ -257,24 +257,20 @@ function extrairDadosSeloMelhorado(texto) {
     }
   }
 
-  // Garantir que qtdAtos permaneça como número
-  if (typeof qtdAtos !== 'number' && qtdAtos !== null) {
-    console.log(`[OCR] ERRO: qtdAtos não é número! Valor: ${qtdAtos}, Tipo: ${typeof qtdAtos}`);
-    // Tentar extrair número da string se for string
-    if (typeof qtdAtos === 'string') {
-      const numeroExtraido = parseInt(qtdAtos.match(/(\d+)/)?.[1] || '0', 10);
-      if (numeroExtraido > 0) {
-        qtdAtosCompleto = qtdAtos; // Salva string completa
-        qtdAtos = numeroExtraido;  // Usa só o número
-        console.log(`[OCR] Corrigido: qtdAtos=${qtdAtos}, qtdAtosCompleto=${qtdAtosCompleto}`);
-      }
-    }
+  // Garantir que usemos qtdAtosCompleto quando disponível
+  if (qtdAtosCompleto) {
+    console.log(`[OCR] Usando quantidade completa: "${qtdAtosCompleto}"`);
+  } else if (qtdAtos !== null) {
+    console.log(`[OCR] Usando apenas número base: ${qtdAtos}`);
+    qtdAtosCompleto = qtdAtos.toString();
   }
 
-  // Se qtdAtosCompleto foi capturado, log para debug
-  if (qtdAtosCompleto && typeof qtdAtos === 'number') {
-    console.log(`[OCR] Quantidade: ${qtdAtos} (base), Completo: ${qtdAtosCompleto}`);
-  }
+  // Log final para debug
+  console.log(`[OCR] Resultado final: qtdAtos=${qtdAtos}, qtdAtosCompleto="${qtdAtosCompleto}"`);
+
+  // Usar qtdAtosCompleto (string) como valor principal para qtdAtos
+  const qtdAtosFinal = qtdAtosCompleto || (qtdAtos ? qtdAtos.toString() : null);
+  console.log(`[OCR] Valor final para banco: "${qtdAtosFinal}"`);
 
   // === ATOS PRATICADOS POR ===
   const atosPorPatterns = [
@@ -383,8 +379,7 @@ function extrairDadosSeloMelhorado(texto) {
   const resultado = {
     seloConsulta,
     codigoSeguranca,
-    qtdAtos,
-    qtdAtosCompleto,  // Informação completa com códigos para logs
+    qtdAtos: qtdAtosFinal,  // Usar a quantidade completa com códigos (string)
     atosPraticadosPor,
     valores,
     textoCompleto: texto
