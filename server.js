@@ -235,7 +235,7 @@ function extrairDadosSeloMelhorado(texto) {
   if (qtdAtos !== null) {
     console.log(`[OCR] Procurando códigos adicionais para quantidade: ${qtdAtos}`);
     
-    // Busca por códigos adicionais após a quantidade
+    // Primeiro tentar encontrar padrões já corretos
     const codigosAdicionaisPatterns = [
       // Captura sequência como "1(7802), 117901)" 
       new RegExp(`${qtdAtos}\\s*\\([^)]+\\)[^\\n]*`, 'i'),
@@ -247,12 +247,65 @@ function extrairDadosSeloMelhorado(texto) {
       /(\d+\s*\([^)]+\),?\s*\d*\)?)/i
     ];
     
+    let encontrado = false;
     for (const pattern of codigosAdicionaisPatterns) {
       const match = texto.match(pattern);
       if (match && match[0]) {
         qtdAtosCompleto = match[0].trim();
         console.log(`[OCR] Códigos adicionais encontrados: ${qtdAtosCompleto}`);
+        encontrado = true;
         break;
+      }
+    }
+
+    // Se não encontrou padrão correto, procurar e corrigir erros comuns do OCR
+    if (!encontrado) {
+      console.log(`[OCR] Procurando erros de OCR para corrigir...`);
+      
+      // Padrão de erro comum: número seguido de 4+ dígitos e )
+      // Ex: "117901)" deve ser "1(7901)"
+      const erroOcrPatterns = [
+        // Padrão: qtdAtos + 4 dígitos + )
+        new RegExp(`\\b${qtdAtos}(\\d{4})\\)`, 'g'),
+        // Padrão: qtdAtos + 4 dígitos + ), + mais números + )
+        new RegExp(`\\b${qtdAtos}(\\d{4})\\),?\\s*(\\d+)\\)?`, 'g')
+      ];
+      
+      for (const pattern of erroOcrPatterns) {
+        const matches = [...texto.matchAll(pattern)];
+        if (matches.length > 0) {
+          for (const match of matches) {
+            console.log(`[OCR] Possível erro detectado: "${match[0]}"`);
+            
+            // Primeiro grupo: os 4 dígitos que devem ficar entre parênteses
+            const codigo4Digitos = match[1];
+            
+            if (codigo4Digitos && codigo4Digitos.length === 4) {
+              // Construir padrão correto: qtdAtos(4digitos)
+              qtdAtosCompleto = `${qtdAtos}(${codigo4Digitos})`;
+              
+              // Se há mais números após, adicionar também
+              if (match[2]) {
+                qtdAtosCompleto += `, ${match[2]})`;
+              }
+              
+              console.log(`[OCR] ERRO CORRIGIDO: "${match[0]}" -> "${qtdAtosCompleto}"`);
+              encontrado = true;
+              break;
+            }
+          }
+          if (encontrado) break;
+        }
+      }
+
+      // Padrão alternativo: procurar 4 dígitos isolados próximos à quantidade
+      if (!encontrado) {
+        const digitosProximosPattern = new RegExp(`${qtdAtos}[^\\d\\n]{0,10}(\\d{4})[^\\d]`, 'i');
+        const digitosMatch = texto.match(digitosProximosPattern);
+        if (digitosMatch) {
+          qtdAtosCompleto = `${qtdAtos}(${digitosMatch[1]})`;
+          console.log(`[OCR] Padrão alternativo encontrado: "${qtdAtosCompleto}"`);
+        }
       }
     }
   }
