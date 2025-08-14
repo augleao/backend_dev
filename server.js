@@ -200,6 +200,8 @@ function extrairDadosSeloMelhorado(texto) {
   ];
 
   let qtdAtos = null;
+  let qtdAtosCompleto = '';
+  
   // Primeiro tenta padrões específicos no texto original
   for (const pattern of qtdPatterns) {
     const match = texto.match(pattern);
@@ -224,6 +226,32 @@ function extrairDadosSeloMelhorado(texto) {
           break;
         }
       }
+    }
+  }
+
+  // Captura informações adicionais dos atos (códigos entre parênteses)
+  if (qtdAtos !== null) {
+    // Busca por códigos adicionais após a quantidade
+    const codigosAdicionaisPatterns = [
+      // Captura sequência como "1(7802), 117901)" 
+      new RegExp(`${qtdAtos}\\s*\\([^)]+\\)[^\\n]*`, 'i'),
+      // Captura linha que contém códigos em parênteses
+      /(\d+\s*\([^)]+\)[^)]*\))/i,
+      // Captura qualquer sequência de números com parênteses na linha seguinte
+      /(\d+\s*\([^)]+\)[^\\n]*)/i
+    ];
+    
+    for (const pattern of codigosAdicionaisPatterns) {
+      const match = texto.match(pattern);
+      if (match && match[0]) {
+        qtdAtosCompleto = match[0].trim();
+        break;
+      }
+    }
+    
+    // Se encontrou códigos adicionais, inclui na resposta
+    if (qtdAtosCompleto) {
+      qtdAtos = qtdAtosCompleto;
     }
   }
 
