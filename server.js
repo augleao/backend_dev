@@ -288,11 +288,30 @@ function extrairDadosSeloMelhorado(texto) {
   for (const pattern of atosPorPatterns) {
     const match = texto.match(pattern);  // Usando texto original para nomes
     if (match && match[1] && match[1].trim().length > 3) {
-      atosPraticadosPor = match[1].trim()
-        .replace(/[^\w\s]/g, ' ')
+      let nome = match[1].trim();
+      
+      // Remove caracteres estranhos e lixo do OCR no final da linha
+      nome = nome
+        // Remove tudo após hífen seguido de texto minúsculo (provável lixo do OCR)
+        .replace(/\s*-\s*[a-z\s]+$/i, '')
+        // Remove sequências de caracteres estranhos no final
+        .replace(/\s*[^\w\s]+\s*[a-z\s]*$/i, '')
+        // Remove palavras isoladas de 1-3 caracteres no final (provável lixo)
+        .replace(/\s+[a-z]{1,3}(\s+[a-z]{1,3})*\s*$/i, '')
+        // Remove números isolados no final
+        .replace(/\s+\d+\s*$/g, '')
+        // Remove caracteres especiais, exceto espaços, hífens em nomes e pontos
+        .replace(/[^\w\sÀ-ÿ\-\.]/g, ' ')
+        // Normaliza espaços múltiplos
         .replace(/\s+/g, ' ')
         .trim();
-      if (atosPraticadosPor.length > 3) break;
+      
+      // Verifica se o nome ainda tem um tamanho razoável (nomes muito curtos podem ser lixo)
+      if (nome.length > 5) {
+        atosPraticadosPor = nome;
+        console.log(`[OCR] Nome capturado: "${atosPraticadosPor}" (original: "${match[1].trim()}")`);
+        break;
+      }
     }
   }
 
