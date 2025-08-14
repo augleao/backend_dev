@@ -191,7 +191,7 @@ function extrairDadosSeloMelhorado(texto) {
     /Qtd\s+de\s+atos[:\s]*(\d+)/i,
     /quantidade[:\s]*(\d+)/i,
     /(\d+)\s+atos/i,
-    // Captura números seguidos de código em parênteses como "1(7804)"
+    // Captura números seguidos de código em parênteses como "1(7804)" - só o número
     /(\d+)\s*\(\d+\)/i,
     // Captura número isolado em linhas que podem representar quantidade
     /^(\d+)\s*$/m,
@@ -210,6 +210,7 @@ function extrairDadosSeloMelhorado(texto) {
       // Valida se é um número razoável para quantidade de atos (1-999)
       if (numero > 0 && numero < 1000) {
         qtdAtos = numero;
+        console.log(`[OCR] Quantidade capturada: ${qtdAtos} (pattern: ${pattern})`);
         break;
       }
     }
@@ -223,6 +224,7 @@ function extrairDadosSeloMelhorado(texto) {
         const numero = parseInt(match[1], 10);
         if (numero > 0 && numero < 1000) {
           qtdAtos = numero;
+          console.log(`[OCR] Quantidade capturada (normalizado): ${qtdAtos} (pattern: ${pattern})`);
           break;
         }
       }
@@ -231,6 +233,8 @@ function extrairDadosSeloMelhorado(texto) {
 
   // Captura informações adicionais dos atos (códigos entre parênteses)
   if (qtdAtos !== null) {
+    console.log(`[OCR] Procurando códigos adicionais para quantidade: ${qtdAtos}`);
+    
     // Busca por códigos adicionais após a quantidade
     const codigosAdicionaisPatterns = [
       // Captura sequência como "1(7802), 117901)" 
@@ -238,21 +242,38 @@ function extrairDadosSeloMelhorado(texto) {
       // Captura linha que contém códigos em parênteses
       /(\d+\s*\([^)]+\)[^)]*\))/i,
       // Captura qualquer sequência de números com parênteses na linha seguinte
-      /(\d+\s*\([^)]+\)[^\\n]*)/i
+      /(\d+\s*\([^)]+\)[^\\n]*)/i,
+      // Padrão mais específico para "(7802), 117901)"
+      /(\d+\s*\([^)]+\),?\s*\d*\)?)/i
     ];
     
     for (const pattern of codigosAdicionaisPatterns) {
       const match = texto.match(pattern);
       if (match && match[0]) {
         qtdAtosCompleto = match[0].trim();
+        console.log(`[OCR] Códigos adicionais encontrados: ${qtdAtosCompleto}`);
         break;
       }
     }
-    
-    // Se encontrou códigos adicionais, inclui na resposta
-    if (qtdAtosCompleto) {
-      qtdAtos = qtdAtosCompleto;
+  }
+
+  // Garantir que qtdAtos permaneça como número
+  if (typeof qtdAtos !== 'number' && qtdAtos !== null) {
+    console.log(`[OCR] ERRO: qtdAtos não é número! Valor: ${qtdAtos}, Tipo: ${typeof qtdAtos}`);
+    // Tentar extrair número da string se for string
+    if (typeof qtdAtos === 'string') {
+      const numeroExtraido = parseInt(qtdAtos.match(/(\d+)/)?.[1] || '0', 10);
+      if (numeroExtraido > 0) {
+        qtdAtosCompleto = qtdAtos; // Salva string completa
+        qtdAtos = numeroExtraido;  // Usa só o número
+        console.log(`[OCR] Corrigido: qtdAtos=${qtdAtos}, qtdAtosCompleto=${qtdAtosCompleto}`);
+      }
     }
+  }
+
+  // Se qtdAtosCompleto foi capturado, log para debug
+  if (qtdAtosCompleto && typeof qtdAtos === 'number') {
+    console.log(`[OCR] Quantidade: ${qtdAtos} (base), Completo: ${qtdAtosCompleto}`);
   }
 
   // === ATOS PRATICADOS POR ===
@@ -328,12 +349,16 @@ function extrairDadosSeloMelhorado(texto) {
     seloConsulta,
     codigoSeguranca,
     qtdAtos,
+    qtdAtosCompleto,  // Informação completa com códigos para logs
     atosPraticadosPor,
     valores,
     textoCompleto: texto
   };
 
-  console.log('[OCR] Resultado da extração melhorada:', resultado);
+  console.log('[OCR] Resultado da extração melhorada:', {
+    ...resultado,
+    ...(qtdAtosCompleto && { qtdAtosDetalhe: `Quantidade base: ${qtdAtos}, Completo: ${qtdAtosCompleto}` })
+  });
   
   return resultado;
 }
