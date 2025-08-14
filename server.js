@@ -151,10 +151,15 @@ function extrairDadosSeloMelhorado(texto) {
 
   // === CÓDIGO DE SEGURANÇA ===
   const codigoPatterns = [
-    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d,.]+)/i,
-    /Código\s+de\s+Segurança[:\s]*([\d,.]+)/i,
-    /CODIGO[:\s]*([\d,.]+)/i,
-    /seguranca[:\s]*([\d,.]+)/i
+    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d\.\,\-]+)/i,
+    /C\s*DIGO\s+DE\s+SEGURAN\s*A[:\s]*([\d\.\,\-]+)/i,
+    /CODIGO\s+DE\s+SEGURANCA[:\s]*([\d\.\,\-]+)/i,
+    /seguranca[:\s]*([\d\.\,\-]+)/i,
+    /codigo\s+seguranca[:\s]*([\d\.\,\-]+)/i,
+    // Padrão específico para o formato do TJ (números com pontos)
+    /(\d{4}\.\d{4}\.\d{4}\.\d{4})/i,
+    // Padrão mais flexível para capturar sequências de dígitos com pontos
+    /(\d{3,4}[\.\-]\d{3,4}[\.\-]\d{3,4}[\.\-]\d{3,4})/i
   ];
 
   let codigoSeguranca = '';
@@ -205,24 +210,57 @@ function extrairDadosSeloMelhorado(texto) {
   }
 
   // === VALORES ===
-  const valoresPatterns = [
-    /Emol\.?[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Emolumento[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Valores?[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Total[:\s]*R?\$?\s*([\d.,]+)/i,
-    /R\$\s*([\d.,]+)/i
+  // Extrai todos os valores monetários encontrados no texto
+  const valoresEncontrados = [];
+  
+  // Padrões para encontrar valores específicos com suas etiquetas
+  const valoresEspecificos = [
+    { nome: 'EMOL', pattern: /EMOL\.?[:\s]*R\$?\s*([\d,\.]+)/gi },
+    { nome: 'ISS', pattern: /ISS[:\s]*R\$?\s*([\d,\.]+)/gi },
+    { nome: 'ISSQN', pattern: /ISSQN[:\s]*R\$?\s*([\d,\.]+)/gi },
+    { nome: 'Taxa', pattern: /Taxa[:\s]*R\$?\s*([\d,\.]+)/gi },
+    { nome: 'Total', pattern: /Total[:\s]*R\$?\s*([\d,\.]+)/gi }
   ];
-
-  let valores = '';
-  for (const pattern of valoresPatterns) {
-    const match = textoNormalizado.match(pattern);
-    if (match && match[1]) {
-      valores = match[1];
-      if (/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/.test(valores)) {
-        break;
-      }
+  
+  // Busca valores específicos com etiquetas
+  for (const valorEspecifico of valoresEspecificos) {
+    let match;
+    while ((match = valorEspecifico.pattern.exec(textoNormalizado)) !== null) {
+      valoresEncontrados.push({
+        tipo: valorEspecifico.nome,
+        valor: match[1],
+        posicao: match.index
+      });
     }
   }
+  
+  // Padrão geral para capturar todos os valores monetários R$ X,XX
+  const padraoGeralValores = /R\$\s*([\d]{1,3}(?:[,\.]\d{2})?)/gi;
+  let matchGeral;
+  while ((matchGeral = padraoGeralValores.exec(textoNormalizado)) !== null) {
+    // Verifica se este valor já não foi capturado com uma etiqueta específica
+    const jaCapturado = valoresEncontrados.some(v => 
+      Math.abs(v.posicao - matchGeral.index) < 50 && v.valor === matchGeral[1]
+    );
+    
+    if (!jaCapturado) {
+      valoresEncontrados.push({
+        tipo: 'Geral',
+        valor: matchGeral[1],
+        posicao: matchGeral.index
+      });
+    }
+  }
+  
+  // Ordena valores por posição no texto
+  valoresEncontrados.sort((a, b) => a.posicao - b.posicao);
+  
+  // Cria string com todos os valores encontrados
+  const valores = valoresEncontrados.length > 0 
+    ? valoresEncontrados.map(v => `${v.tipo}: R$ ${v.valor}`).join(' | ')
+    : '';
+  
+  console.log('[OCR] Valores encontrados:', valoresEncontrados);
 
   const resultado = {
     seloConsulta,
