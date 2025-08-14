@@ -238,40 +238,85 @@ function extrairDadosSeloMelhorado(texto) {
     // PRIMEIRO: Procurar e corrigir erros comuns do OCR
     console.log(`[OCR] Verificando erros de OCR...`);
     
-    // Padrão de erro comum: número seguido de 4+ dígitos e )
-    // Ex: "117901)" deve ser "1(7901)"
-    const erroOcrPatterns = [
-      // Padrão: qtdAtos + 4 dígitos + )
-      new RegExp(`\\b${qtdAtos}(\\d{4})\\)`, 'g'),
-      // Padrão: qtdAtos + 4 dígitos + ), + mais números + )
-      new RegExp(`\\b${qtdAtos}(\\d{4})\\),?\\s*(\\d+)\\)?`, 'g')
-    ];
+    // Padrão para detectar erros específicos como "1(7802), 117901)"
+    // onde "117901)" deveria ser "1(7901)"
+    const textoParaCorrecao = qtdAtosCompleto || texto;
     
-    let encontrado = false;
-    for (const pattern of erroOcrPatterns) {
-      const matches = [...texto.matchAll(pattern)];
-      if (matches.length > 0) {
-        for (const match of matches) {
-          console.log(`[OCR] Possível erro detectado: "${match[0]}"`);
+    // Padrão específico: capturar a string inteira que pode conter erros
+    const padraoCompleto = new RegExp(`${qtdAtos}\\s*\\([^)]+\\)[^\\n]*`, 'i');
+    const matchCompleto = textoParaCorrecao.match(padraoCompleto);
+    
+    if (matchCompleto) {
+      let stringCompleta = matchCompleto[0];
+      console.log(`[OCR] String completa encontrada: "${stringCompleta}"`);
+      
+      // Procurar por padrões de erro como "117901)" que deveriam ser "1(7901)"
+      // Padrão: número de 5+ dígitos seguido de )
+      const erroPattern = /(\d{5,})\)/g;
+      const errosEncontrados = [...stringCompleta.matchAll(erroPattern)];
+      
+      if (errosEncontrados.length > 0) {
+        console.log(`[OCR] Erros de OCR detectados:`, errosEncontrados.map(m => m[0]));
+        
+        for (const erro of errosEncontrados) {
+          const numeroErrado = erro[1]; // Ex: "17901"
           
-          // Primeiro grupo: os 4 dígitos que devem ficar entre parênteses
-          const codigo4Digitos = match[1];
-          
-          if (codigo4Digitos && codigo4Digitos.length === 4) {
-            // Construir padrão correto: qtdAtos(4digitos)
-            qtdAtosCompleto = `${qtdAtos}(${codigo4Digitos})`;
+          // Se tem 5+ dígitos, provavelmente o primeiro dígito é a quantidade
+          // e os próximos 4 são o código
+          if (numeroErrado.length >= 5) {
+            const primeiroDigito = numeroErrado[0];
+            const codigo4Digitos = numeroErrado.slice(1, 5);
             
-            // Se há mais números após, adicionar também
-            if (match[2]) {
-              qtdAtosCompleto += `, ${match[2]})`;
-            }
+            const padraoCorreto = `${primeiroDigito}(${codigo4Digitos})`;
+            console.log(`[OCR] Corrigindo "${erro[0]}" para "${padraoCorreto}"`);
             
-            console.log(`[OCR] ERRO CORRIGIDO: "${match[0]}" -> "${qtdAtosCompleto}"`);
-            encontrado = true;
-            break;
+            // Substituir na string completa
+            stringCompleta = stringCompleta.replace(erro[0], padraoCorreto);
           }
         }
-        if (encontrado) break;
+        
+        qtdAtosCompleto = stringCompleta;
+        console.log(`[OCR] ERRO CORRIGIDO: String final = "${qtdAtosCompleto}"`);
+        encontrado = true;
+      }
+    }
+    
+    // Se não encontrou na string completa, procurar erros individuais
+    if (!encontrado) {
+      const erroOcrPatterns = [
+        // Padrão: qtdAtos + 4+ dígitos + )
+        new RegExp(`\\b${qtdAtos}(\\d{4,})\\)`, 'g'),
+        // Padrão: número de 5+ dígitos + )
+        /(\d{5,})\)/g
+      ];
+      
+      for (const pattern of erroOcrPatterns) {
+        const matches = [...texto.matchAll(pattern)];
+        if (matches.length > 0) {
+          for (const match of matches) {
+            console.log(`[OCR] Possível erro detectado: "${match[0]}"`);
+            
+            const numeroCompleto = match[1];
+            
+            if (numeroCompleto && numeroCompleto.length >= 4) {
+              // Se começa com qtdAtos, extrair só os 4 dígitos do código
+              if (numeroCompleto.startsWith(qtdAtos.toString())) {
+                const codigo4Digitos = numeroCompleto.slice(qtdAtos.toString().length, qtdAtos.toString().length + 4);
+                qtdAtosCompleto = `${qtdAtos}(${codigo4Digitos})`;
+              } else {
+                // Se é um número longo, primeiro dígito = qtd, próximos 4 = código
+                const primeiroDigito = numeroCompleto[0];
+                const codigo4Digitos = numeroCompleto.slice(1, 5);
+                qtdAtosCompleto = `${primeiroDigito}(${codigo4Digitos})`;
+              }
+              
+              console.log(`[OCR] ERRO CORRIGIDO: "${match[0]}" -> "${qtdAtosCompleto}"`);
+              encontrado = true;
+              break;
+            }
+          }
+          if (encontrado) break;
+        }
       }
     }
     
