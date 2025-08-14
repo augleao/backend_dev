@@ -2961,141 +2961,6 @@ app.put('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-
-// Função robusta para extrair dados do texto OCR do selo
-function extrairDadosSeloPorOCR(textoOuCaminho) {
-  // Se for caminho, leia o arquivo
-  const fs = require('fs');
-  let texto = textoOuCaminho;
-  if (fs.existsSync(textoOuCaminho)) {
-    texto = fs.readFileSync(textoOuCaminho, 'utf8');
-  }
-
-  console.log('[OCR] Texto original para processamento:', texto);
-
-  // Normalizar o texto: remover caracteres especiais e normalizar espaços
-  const textoNormalizado = texto
-    .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
-    .replace(/[^\w\s:.-]/g, ' ')  // Remove caracteres especiais exceto : . -
-    .trim();
-
-  console.log('[OCR] Texto normalizado:', textoNormalizado);
-
-  // === SELO DE CONSULTA ===
-  // Múltiplos padrões para capturar variações
-  const seloPatterns = [
-    /SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i,
-    /Selo\s+Consulta[:\s]*([A-Z0-9]+)/i,
-    /SELO[:\s]*([A-Z0-9]{8,})/i,
-    /consulta[:\s]*([A-Z0-9]{8,})/i
-  ];
-  
-  let seloConsulta = '';
-  for (const pattern of seloPatterns) {
-    const match = textoNormalizado.match(pattern);
-    if (match && match[1]) {
-      seloConsulta = match[1];
-      break;
-    }
-  }
-
-  // === CÓDIGO DE SEGURANÇA ===
-  const codigoPatterns = [
-    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d,.]+)/i,
-    /Código\s+de\s+Segurança[:\s]*([\d,.]+)/i,
-    /CODIGO[:\s]*([\d,.]+)/i,
-    /seguranca[:\s]*([\d,.]+)/i,
-    /codigo\s+seguranca[:\s]*([\d,.]+)/i
-  ];
-
-  let codigoSeguranca = '';
-  for (const pattern of codigoPatterns) {
-    const match = textoNormalizado.match(pattern);
-    if (match && match[1]) {
-      codigoSeguranca = match[1];
-      break;
-    }
-  }
-
-  // === QUANTIDADE DE ATOS ===
-  const qtdPatterns = [
-    /Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i,
-    /Qtd\.?\s+Atos[:\s]*(\d+)/i,
-    /Qtd\s+de\s+atos[:\s]*(\d+)/i,
-    /quantidade[:\s]*(\d+)/i,
-    /(\d+)\s+atos/i
-  ];
-
-  let qtdAtos = null;
-  for (const pattern of qtdPatterns) {
-    const match = textoNormalizado.match(pattern);
-    if (match && match[1]) {
-      qtdAtos = parseInt(match[1], 10);
-      break;
-    }
-  }
-
-  // === ATOS PRATICADOS POR ===
-  const atosPorPatterns = [
-    /Praticado\(s\)\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /Atos\s+praticados\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /praticado\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /Por[:\s]*([A-Z][^\n\r]+?)(?:\n|\r|$)/i,
-    // Captura nomes que começam com maiúscula
-    /por[:\s]*([A-Z][A-Za-z\s]+[A-Z][A-Za-z\s]*)/i
-  ];
-
-  let atosPraticadosPor = '';
-  for (const pattern of atosPorPatterns) {
-    const match = texto.match(pattern);  // Usando texto original para nomes
-    if (match && match[1] && match[1].trim().length > 3) {
-      atosPraticadosPor = match[1].trim();
-      // Limpar possíveis artefatos de OCR
-      atosPraticadosPor = atosPraticadosPor
-        .replace(/[^\w\s]/g, ' ')  // Remove caracteres especiais
-        .replace(/\s+/g, ' ')      // Normaliza espaços
-        .trim();
-      if (atosPraticadosPor.length > 3) break;
-    }
-  }
-
-  // === VALORES ===
-  const valoresPatterns = [
-    /Emol\.?[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Emolumento[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Valores?[:\s]*R?\$?\s*([\d.,]+)/i,
-    /Total[:\s]*R?\$?\s*([\d.,]+)/i,
-    /R\$\s*([\d.,]+)/i,
-    // Captura sequências de números com vírgulas/pontos (valores monetários)
-    /([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i
-  ];
-
-  let valores = '';
-  for (const pattern of valoresPatterns) {
-    const match = textoNormalizado.match(pattern);
-    if (match && match[1]) {
-      valores = match[1];
-      // Verificar se parece um valor monetário válido
-      if (/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/.test(valores)) {
-        break;
-      }
-    }
-  }
-
-  const resultado = {
-    seloConsulta,
-    codigoSeguranca,
-    qtdAtos,
-    atosPraticadosPor,
-    valores,
-    textoCompleto: texto
-  };
-
-  console.log('[OCR] Resultado da extração:', resultado);
-  
-  return resultado;
-}
-
 app.get('/api/selos-execucao-servico/:protocolo', async (req, res) => {
   const { protocolo } = req.params;
   const result = await pool.query('SELECT * FROM selos_execucao_servico WHERE execucao_servico_id = $1 ORDER BY criado_em DESC', [protocolo]);
@@ -3131,7 +2996,7 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
     console.log('[BACKEND] Texto extraído do OCR:', textoOCR);
 
     // 2. Extraia os dados do texto OCR
-    const dadosExtraidos = extrairDadosSeloPorOCR(textoOCR);
+    const dadosExtraidos = extrairDadosSeloMelhorado(textoOCR);
     console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
     // 3. Salve apenas os dados extraídos do OCR no banco (sem imagem_url)
@@ -3218,7 +3083,7 @@ app.post('/api/teste-ocr', upload.single('imagem'), async (req, res) => {
     console.log('[TESTE OCR] Texto bruto extraído:', textoOCR);
 
     // Extrair dados com algoritmo melhorado
-    const dadosExtraidos = extrairDadosSeloPorOCR(textoOCR);
+    const dadosExtraidos = extrairDadosSeloMelhorado(textoOCR);
     
     res.json({
       success: true,
