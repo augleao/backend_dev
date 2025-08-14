@@ -290,27 +290,43 @@ function extrairDadosSeloMelhorado(texto) {
     if (match && match[1] && match[1].trim().length > 3) {
       let nome = match[1].trim();
       
+      console.log(`[OCR] Nome original: "${nome}"`);
+      
       // Remove caracteres estranhos e lixo do OCR no final da linha
       nome = nome
         // Remove tudo após hífen seguido de texto minúsculo (provável lixo do OCR)
         .replace(/\s*-\s*[a-z\s]+$/i, '')
+        // Remove sequências suspeitas de maiúsculas e minúsculas misturadas no final (como RRFRcSaSoS)
+        .replace(/\s+[A-Za-z]*[A-Z][a-z][A-Z][a-z][A-Za-z]*\s*$/g, '')
+        // Remove sequências de 4+ caracteres misturando maiúsculas/minúsculas no final
+        .replace(/\s+[A-Za-z]{4,}[A-Z][a-z][A-Za-z]*\s*$/g, '')
+        // Remove palavras com padrão estranho de maiúsculas/minúsculas (ex: RRFRcSaSoS)
+        .replace(/\s+[A-Z]{2,}[a-z]+[A-Z]+[a-z]*[A-Z]*[a-z]*\s*$/g, '')
+        // Remove sequências de caracteres repetidos ou aleatórios no final
+        .replace(/\s+[A-Za-z]*([A-Z]{2,}|[a-z]{1}[A-Z]{1}){2,}[A-Za-z]*\s*$/g, '')
         // Remove sequências de caracteres estranhos no final
         .replace(/\s*[^\w\s]+\s*[a-z\s]*$/i, '')
         // Remove palavras isoladas de 1-3 caracteres no final (provável lixo)
         .replace(/\s+[a-z]{1,3}(\s+[a-z]{1,3})*\s*$/i, '')
         // Remove números isolados no final
         .replace(/\s+\d+\s*$/g, '')
+        // Remove palavras que não sejam nomes típicos (contendo muitas alterações de case)
+        .replace(/\s+\b[A-Za-z]*[A-Z][a-z][A-Z][A-Za-z]*\b\s*$/g, '')
         // Remove caracteres especiais, exceto espaços, hífens em nomes e pontos
         .replace(/[^\w\sÀ-ÿ\-\.]/g, ' ')
         // Normaliza espaços múltiplos
         .replace(/\s+/g, ' ')
         .trim();
       
+      console.log(`[OCR] Nome após limpeza: "${nome}"`);
+      
       // Verifica se o nome ainda tem um tamanho razoável (nomes muito curtos podem ser lixo)
       if (nome.length > 5) {
         atosPraticadosPor = nome;
-        console.log(`[OCR] Nome capturado: "${atosPraticadosPor}" (original: "${match[1].trim()}")`);
+        console.log(`[OCR] Nome final aceito: "${atosPraticadosPor}"`);
         break;
+      } else {
+        console.log(`[OCR] Nome rejeitado (muito curto): "${nome}"`);
       }
     }
   }
