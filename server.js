@@ -94,27 +94,148 @@ cron.schedule('* * * * *', async () => {
 
 async function extrairDadosSeloPorOCR(imagePath) {
   console.log('[BACKEND] Iniciando OCR para:', imagePath);
-  const { data: { text } } = await Tesseract.recognize(imagePath, 'por');
-  console.log('[BACKEND] Texto extraído pelo OCR:', text);
   
-  console.log('Tamanho do buffer recebido:', dataBuffer.length);
-  console.log('JWT_SECRET em uso:', process.env.JWT_SECRET);
+  try {
+    // Usar Tesseract com configurações melhoradas para OCR
+    const { data: { text } } = await Tesseract.recognize(imagePath, 'por', {
+      logger: m => console.log('[OCR Progress]', m),
+      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
+    });
+    
+    console.log('[BACKEND] Texto extraído pelo OCR:', text);
+    
+    // Usar a função melhorada de extração
+    const dadosExtraidos = extrairDadosSeloMelhorado(text);
+    
+    return dadosExtraidos;
+  } catch (error) {
+    console.error('[BACKEND] Erro no OCR:', error);
+    return {
+      seloConsulta: '',
+      codigoSeguranca: '',
+      qtdAtos: null,
+      atosPraticadosPor: '',
+      valores: '',
+      textoCompleto: ''
+    };
+  }
+}
 
-  // Exemplo de extração simples (ajuste conforme o layout do selo)
-  const seloConsulta = (text.match(/Selo Consulta[:\\s]*([A-Z0-9]+)/i) || [])[1] || '';
-  const codigoSeguranca = (text.match(/Código de Segurança[:\\s]*([A-Z0-9]+)/i) || [])[1] || '';
-  const qtdAtos = (text.match(/Qtd\\.? Atos[:\\s]*([0-9]+)/i) || [])[1] || '';
-  const atosPraticadosPor = (text.match(/Atos praticados por[:\\s]*([\\w\\s]+)/i) || [])[1] || '';
-  const valores = (text.match(/Valores[:\\s]*([\\d\\.,]+)/i) || [])[1] || '';
+// Função auxiliar melhorada para extração de dados
+function extrairDadosSeloMelhorado(texto) {
+  // Normalizar o texto: remover caracteres especiais e normalizar espaços
+  const textoNormalizado = texto
+    .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
+    .replace(/[^\w\s:.-]/g, ' ')  // Remove caracteres especiais exceto : . -
+    .trim();
 
-  return {
+  console.log('[OCR] Texto normalizado:', textoNormalizado);
+
+  // === SELO DE CONSULTA ===
+  const seloPatterns = [
+    /SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i,
+    /Selo\s+Consulta[:\s]*([A-Z0-9]+)/i,
+    /SELO[:\s]*([A-Z0-9]{8,})/i,
+    /consulta[:\s]*([A-Z0-9]{8,})/i
+  ];
+  
+  let seloConsulta = '';
+  for (const pattern of seloPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      seloConsulta = match[1];
+      break;
+    }
+  }
+
+  // === CÓDIGO DE SEGURANÇA ===
+  const codigoPatterns = [
+    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d,.]+)/i,
+    /Código\s+de\s+Segurança[:\s]*([\d,.]+)/i,
+    /CODIGO[:\s]*([\d,.]+)/i,
+    /seguranca[:\s]*([\d,.]+)/i
+  ];
+
+  let codigoSeguranca = '';
+  for (const pattern of codigoPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      codigoSeguranca = match[1];
+      break;
+    }
+  }
+
+  // === QUANTIDADE DE ATOS ===
+  const qtdPatterns = [
+    /Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i,
+    /Qtd\.?\s+Atos[:\s]*(\d+)/i,
+    /Qtd\s+de\s+atos[:\s]*(\d+)/i,
+    /quantidade[:\s]*(\d+)/i,
+    /(\d+)\s+atos/i
+  ];
+
+  let qtdAtos = null;
+  for (const pattern of qtdPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      qtdAtos = parseInt(match[1], 10);
+      break;
+    }
+  }
+
+  // === ATOS PRATICADOS POR ===
+  const atosPorPatterns = [
+    /Praticado\(s\)\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /Atos\s+praticados\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /praticado\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /Por[:\s]*([A-Z][^\n\r]+?)(?:\n|\r|$)/i
+  ];
+
+  let atosPraticadosPor = '';
+  for (const pattern of atosPorPatterns) {
+    const match = texto.match(pattern);  // Usando texto original para nomes
+    if (match && match[1] && match[1].trim().length > 3) {
+      atosPraticadosPor = match[1].trim()
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (atosPraticadosPor.length > 3) break;
+    }
+  }
+
+  // === VALORES ===
+  const valoresPatterns = [
+    /Emol\.?[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Emolumento[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Valores?[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Total[:\s]*R?\$?\s*([\d.,]+)/i,
+    /R\$\s*([\d.,]+)/i
+  ];
+
+  let valores = '';
+  for (const pattern of valoresPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      valores = match[1];
+      if (/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/.test(valores)) {
+        break;
+      }
+    }
+  }
+
+  const resultado = {
     seloConsulta,
     codigoSeguranca,
     qtdAtos,
     atosPraticadosPor,
     valores,
-    textoCompleto: text
+    textoCompleto: texto
   };
+
+  console.log('[OCR] Resultado da extração melhorada:', resultado);
+  
+  return resultado;
 }
 
 // Executar criação da tabela
@@ -2804,27 +2925,118 @@ function extrairDadosSeloPorOCR(textoOuCaminho) {
     texto = fs.readFileSync(textoOuCaminho, 'utf8');
   }
 
-  // Selo de Consulta
-  const seloConsultaMatch = texto.match(/SELO DE CONSULTA:\s*([A-Z0-9]+)/i);
-  const seloConsulta = seloConsultaMatch ? seloConsultaMatch[1] : '';
+  console.log('[OCR] Texto original para processamento:', texto);
 
-  // Código de Segurança
-  const codigoSegurancaMatch = texto.match(/CÓDIGO DE SEGURANÇA:\s*([\d,.]+)/i);
-  const codigoSeguranca = codigoSegurancaMatch ? codigoSegurancaMatch[1] : '';
+  // Normalizar o texto: remover caracteres especiais e normalizar espaços
+  const textoNormalizado = texto
+    .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
+    .replace(/[^\w\s:.-]/g, ' ')  // Remove caracteres especiais exceto : . -
+    .trim();
 
-  // Quantidade de Atos
-  const qtdAtosMatch = texto.match(/Quantidade de atos praticados:\s*(\d+)/i);
-  const qtdAtos = qtdAtosMatch ? parseInt(qtdAtosMatch[1], 10) : null;
+  console.log('[OCR] Texto normalizado:', textoNormalizado);
 
-  // Atos praticados por
-  const atosPraticadosPorMatch = texto.match(/Pratcado\(s\) por:\s*([^\n]+)/i);
-  const atosPraticadosPor = atosPraticadosPorMatch ? atosPraticadosPorMatch[1].trim() : '';
+  // === SELO DE CONSULTA ===
+  // Múltiplos padrões para capturar variações
+  const seloPatterns = [
+    /SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i,
+    /Selo\s+Consulta[:\s]*([A-Z0-9]+)/i,
+    /SELO[:\s]*([A-Z0-9]{8,})/i,
+    /consulta[:\s]*([A-Z0-9]{8,})/i
+  ];
+  
+  let seloConsulta = '';
+  for (const pattern of seloPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      seloConsulta = match[1];
+      break;
+    }
+  }
 
-  // Valores (linha que começa com - Emol.)
-  const valoresMatch = texto.match(/- Emol\.:\s*([^\n]+)/i);
-  const valores = valoresMatch ? valoresMatch[1].trim() : '';
+  // === CÓDIGO DE SEGURANÇA ===
+  const codigoPatterns = [
+    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d,.]+)/i,
+    /Código\s+de\s+Segurança[:\s]*([\d,.]+)/i,
+    /CODIGO[:\s]*([\d,.]+)/i,
+    /seguranca[:\s]*([\d,.]+)/i,
+    /codigo\s+seguranca[:\s]*([\d,.]+)/i
+  ];
 
-  return {
+  let codigoSeguranca = '';
+  for (const pattern of codigoPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      codigoSeguranca = match[1];
+      break;
+    }
+  }
+
+  // === QUANTIDADE DE ATOS ===
+  const qtdPatterns = [
+    /Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i,
+    /Qtd\.?\s+Atos[:\s]*(\d+)/i,
+    /Qtd\s+de\s+atos[:\s]*(\d+)/i,
+    /quantidade[:\s]*(\d+)/i,
+    /(\d+)\s+atos/i
+  ];
+
+  let qtdAtos = null;
+  for (const pattern of qtdPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      qtdAtos = parseInt(match[1], 10);
+      break;
+    }
+  }
+
+  // === ATOS PRATICADOS POR ===
+  const atosPorPatterns = [
+    /Praticado\(s\)\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /Atos\s+praticados\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /praticado\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
+    /Por[:\s]*([A-Z][^\n\r]+?)(?:\n|\r|$)/i,
+    // Captura nomes que começam com maiúscula
+    /por[:\s]*([A-Z][A-Za-z\s]+[A-Z][A-Za-z\s]*)/i
+  ];
+
+  let atosPraticadosPor = '';
+  for (const pattern of atosPorPatterns) {
+    const match = texto.match(pattern);  // Usando texto original para nomes
+    if (match && match[1] && match[1].trim().length > 3) {
+      atosPraticadosPor = match[1].trim();
+      // Limpar possíveis artefatos de OCR
+      atosPraticadosPor = atosPraticadosPor
+        .replace(/[^\w\s]/g, ' ')  // Remove caracteres especiais
+        .replace(/\s+/g, ' ')      // Normaliza espaços
+        .trim();
+      if (atosPraticadosPor.length > 3) break;
+    }
+  }
+
+  // === VALORES ===
+  const valoresPatterns = [
+    /Emol\.?[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Emolumento[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Valores?[:\s]*R?\$?\s*([\d.,]+)/i,
+    /Total[:\s]*R?\$?\s*([\d.,]+)/i,
+    /R\$\s*([\d.,]+)/i,
+    // Captura sequências de números com vírgulas/pontos (valores monetários)
+    /([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i
+  ];
+
+  let valores = '';
+  for (const pattern of valoresPatterns) {
+    const match = textoNormalizado.match(pattern);
+    if (match && match[1]) {
+      valores = match[1];
+      // Verificar se parece um valor monetário válido
+      if (/^\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?$/.test(valores)) {
+        break;
+      }
+    }
+  }
+
+  const resultado = {
     seloConsulta,
     codigoSeguranca,
     qtdAtos,
@@ -2832,6 +3044,10 @@ function extrairDadosSeloPorOCR(textoOuCaminho) {
     valores,
     textoCompleto: texto
   };
+
+  console.log('[OCR] Resultado da extração:', resultado);
+  
+  return resultado;
 }
 
 app.get('/api/selos-execucao-servico/:protocolo', async (req, res) => {
@@ -2860,8 +3076,11 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
     }
 
     // 1. Realize o OCR na imagem usando tesseract.js
-    const Tesseract = require('tesseract.js');
-    const ocrResult = await Tesseract.recognize(path, 'por');
+    const ocrResult = await Tesseract.recognize(path, 'por', {
+      logger: m => console.log('[OCR Progress]', m),
+      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
+    });
     const textoOCR = ocrResult.data.text;
     console.log('[BACKEND] Texto extraído do OCR:', textoOCR);
 
@@ -2932,6 +3151,48 @@ app.delete('/api/execucao-servico/:execucaoId/selo/:seloId', authenticateAdmin, 
   }
 });
 
+// Rota de teste para OCR melhorado
+app.post('/api/teste-ocr', upload.single('imagem'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    const { path } = req.file;
+    console.log('[TESTE OCR] Processando arquivo:', path);
+
+    // Realizar OCR melhorado
+    const ocrResult = await Tesseract.recognize(path, 'por', {
+      logger: m => console.log('[OCR Progress]', m),
+      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
+    });
+    
+    const textoOCR = ocrResult.data.text;
+    console.log('[TESTE OCR] Texto bruto extraído:', textoOCR);
+
+    // Extrair dados com algoritmo melhorado
+    const dadosExtraidos = extrairDadosSeloPorOCR(textoOCR);
+    
+    res.json({
+      success: true,
+      textoOcr: textoOCR,
+      dadosExtraidos: dadosExtraidos,
+      qualidade: {
+        confidence: ocrResult.data.confidence,
+        lines: ocrResult.data.lines?.length || 0,
+        words: ocrResult.data.words?.length || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('[TESTE OCR] Erro:', error);
+    res.status(500).json({ 
+      error: 'Erro no processamento OCR', 
+      details: error.message 
+    });
+  }
+});
 
 // Rota para buscar histórico de status de um pedido
 app.get('/api/pedidoshistoricostatus/:protocolo/historico-status', async (req, res) => {
