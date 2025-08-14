@@ -185,19 +185,45 @@ function extrairDadosSeloMelhorado(texto) {
 
   // === QUANTIDADE DE ATOS ===
   const qtdPatterns = [
+    // Padrões específicos para o formato do TJ
     /Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i,
     /Qtd\.?\s+Atos[:\s]*(\d+)/i,
     /Qtd\s+de\s+atos[:\s]*(\d+)/i,
     /quantidade[:\s]*(\d+)/i,
-    /(\d+)\s+atos/i
+    /(\d+)\s+atos/i,
+    // Captura números seguidos de código em parênteses como "1(7804)"
+    /(\d+)\s*\(\d+\)/i,
+    // Captura número isolado em linhas que podem representar quantidade
+    /^(\d+)\s*$/m,
+    // Padrão para formato "1 Elise" (onde Elise pode ser parte do OCR)
+    /(\d+)\s+[A-Za-z]+/i
   ];
 
   let qtdAtos = null;
+  // Primeiro tenta padrões específicos no texto original
   for (const pattern of qtdPatterns) {
-    const match = textoNormalizado.match(pattern);
+    const match = texto.match(pattern);
     if (match && match[1]) {
-      qtdAtos = parseInt(match[1], 10);
-      break;
+      const numero = parseInt(match[1], 10);
+      // Valida se é um número razoável para quantidade de atos (1-999)
+      if (numero > 0 && numero < 1000) {
+        qtdAtos = numero;
+        break;
+      }
+    }
+  }
+  
+  // Se não encontrou no texto original, tenta no normalizado
+  if (qtdAtos === null) {
+    for (const pattern of qtdPatterns) {
+      const match = textoNormalizado.match(pattern);
+      if (match && match[1]) {
+        const numero = parseInt(match[1], 10);
+        if (numero > 0 && numero < 1000) {
+          qtdAtos = numero;
+          break;
+        }
+      }
     }
   }
 

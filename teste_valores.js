@@ -1,4 +1,4 @@
-// Teste para verificar a extração de valores do OCR com o texto real do log
+// Teste para verificar a extração completa do OCR com foco na quantidade de atos
 const textoSeloReal = `PODER JUDICIÁRIO - TJIMG / CORREGEDORIA GERAL DE JUSTIÇA
 1º OFÍCIO REGISTRO CIVIL DAS PESSOAS NATURAIS DE
 CAMPANHA - MG
@@ -13,87 +13,106 @@ Total: R$60,98 - ISS: R$ 1,42 Elpge
 
 Consulte a validade deste selo no site: https:/selos.tima jus.br`;
 
-console.log('=== TESTE DE EXTRAÇÃO COMPLETA ===');
+console.log('=== TESTE DE EXTRAÇÃO QUANTIDADE DE ATOS ===');
 console.log('Texto do selo:', textoSeloReal);
 console.log('');
 
-// Simular a extração completa como no código atual
-function extrairDadosCompletos(texto) {
-  // === VALORES ===
-  // Extrai todos os valores monetários encontrados no texto ORIGINAL (não normalizado)
-  const valoresEncontrados = [];
+// Simular a extração de quantidade como no código atual
+function testarQuantidadeAtos(texto) {
+  console.log('=== TESTANDO QUANTIDADE DE ATOS ===');
   
-  // Padrões para encontrar valores específicos com suas etiquetas no texto original
-  const valoresEspecificos = [
-    { nome: 'Emol', pattern: /Emol\.?[:\s]*R\$?\s*([\d,\.]+)/gi },
-    { nome: 'Tx. Judic', pattern: /Tx\.?\s*Judic\.?[:\s]*R\$?\s*([\d,\.]+)/gi },
-    { nome: 'Total', pattern: /Total[:\s]*R\$?\s*([\d,\.]+)/gi },
-    { nome: 'ISS', pattern: /ISS[:\s]*R\$?\s*([\d,\.]+)/gi },
-    { nome: 'ISSQN', pattern: /ISSQN[:\s]*R\$?\s*([\d,\.]+)/gi },
-    { nome: 'Taxa', pattern: /Taxa[:\s]*R\$?\s*([\d,\.]+)/gi }
-  ];
-  
-  // Busca valores específicos com etiquetas no texto ORIGINAL
-  for (const valorEspecifico of valoresEspecificos) {
-    let match;
-    while ((match = valorEspecifico.pattern.exec(texto)) !== null) {
-      valoresEncontrados.push({
-        tipo: valorEspecifico.nome,
-        valor: match[1],
-        posicao: match.index
-      });
-    }
-  }
-  
-  // Se não encontrou valores específicos, busca padrão geral no texto original
-  if (valoresEncontrados.length === 0) {
-    const padraoGeralValores = /R\$\s*([\d]{1,3}(?:[,\.]\d{2})?)/gi;
-    let matchGeral;
-    while ((matchGeral = padraoGeralValores.exec(texto)) !== null) {
-      valoresEncontrados.push({
-        tipo: 'Valor',
-        valor: matchGeral[1],
-        posicao: matchGeral.index
-      });
-    }
-  }
-  
-  // Ordena valores por posição no texto
-  valoresEncontrados.sort((a, b) => a.posicao - b.posicao);
-  
-  // Cria string com todos os valores encontrados
-  const valores = valoresEncontrados.length > 0 
-    ? valoresEncontrados.map(v => `${v.tipo}: R$ ${v.valor}`).join(' - ')
-    : '';
-  
-  // === CÓDIGO DE SEGURANÇA ===
-  const codigoPatterns = [
-    /CÓDIGO\s+DE\s+SEGURANÇA[:\s]*([\d\.\,\-]+)/i,
-    /(\d{4}\.\d{4}\.\d{4}\.\d{4})/i
+  // Texto normalizado (como no código real)
+  const textoNormalizado = texto
+    .replace(/[áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ]/g, (match) => {
+      const map = {
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'â': 'a', 'ê': 'e', 'î': 'i', 'ô': 'o', 'û': 'u',
+        'ã': 'a', 'õ': 'o', 'ç': 'c',
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+        'Â': 'A', 'Ê': 'E', 'Î': 'I', 'Ô': 'O', 'Û': 'U',
+        'Ã': 'A', 'Õ': 'O', 'Ç': 'C'
+      };
+      return map[match] || match;
+    })
+    .replace(/[^\w\s:.-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  console.log('Texto normalizado:', textoNormalizado);
+  console.log('');
+
+  // === QUANTIDADE DE ATOS ===
+  const qtdPatterns = [
+    // Padrões específicos para o formato do TJ
+    /Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i,
+    /Qtd\.?\s+Atos[:\s]*(\d+)/i,
+    /Qtd\s+de\s+atos[:\s]*(\d+)/i,
+    /quantidade[:\s]*(\d+)/i,
+    /(\d+)\s+atos/i,
+    // Captura números seguidos de código em parênteses como "1(7804)"
+    /(\d+)\s*\(\d+\)/i,
+    // Captura número isolado em linhas que podem representar quantidade
+    /^(\d+)\s*$/m,
+    // Padrão para formato "1 Elise" (onde Elise pode ser parte do OCR)
+    /(\d+)\s+[A-Za-z]+/i
   ];
 
-  let codigoSeguranca = '';
-  for (const pattern of codigoPatterns) {
+  let qtdAtos = null;
+  // Primeiro tenta padrões específicos no texto original
+  console.log('--- Testando no texto ORIGINAL ---');
+  for (let i = 0; i < qtdPatterns.length; i++) {
+    const pattern = qtdPatterns[i];
     const match = texto.match(pattern);
+    console.log(`Padrão ${i + 1}: ${pattern}`);
     if (match && match[1]) {
-      codigoSeguranca = match[1];
-      break;
+      const numero = parseInt(match[1], 10);
+      console.log(`  Match encontrado: "${match[0]}" -> Número: ${numero}`);
+      // Valida se é um número razoável para quantidade de atos (1-999)
+      if (numero > 0 && numero < 1000) {
+        console.log(`  ✅ Número válido: ${numero}`);
+        if (qtdAtos === null) {
+          qtdAtos = numero;
+          console.log(`  🎯 QUANTIDADE DEFINIDA: ${qtdAtos}`);
+        }
+      } else {
+        console.log(`  ❌ Número fora do range válido: ${numero}`);
+      }
+    } else {
+      console.log('  ⭕ Sem match');
     }
   }
   
-  console.log('[OCR] Valores encontrados:', valoresEncontrados);
+  // Se não encontrou no texto original, tenta no normalizado
+  if (qtdAtos === null) {
+    console.log('');
+    console.log('--- Testando no texto NORMALIZADO ---');
+    for (let i = 0; i < qtdPatterns.length; i++) {
+      const pattern = qtdPatterns[i];
+      const match = textoNormalizado.match(pattern);
+      console.log(`Padrão ${i + 1}: ${pattern}`);
+      if (match && match[1]) {
+        const numero = parseInt(match[1], 10);
+        console.log(`  Match encontrado: "${match[0]}" -> Número: ${numero}`);
+        if (numero > 0 && numero < 1000) {
+          console.log(`  ✅ Número válido: ${numero}`);
+          if (qtdAtos === null) {
+            qtdAtos = numero;
+            console.log(`  🎯 QUANTIDADE DEFINIDA: ${qtdAtos}`);
+          }
+        } else {
+          console.log(`  ❌ Número fora do range válido: ${numero}`);
+        }
+      } else {
+        console.log('  ⭕ Sem match');
+      }
+    }
+  }
+
+  console.log('');
+  console.log('=== RESULTADO FINAL ===');
+  console.log('Quantidade de atos capturada:', qtdAtos);
   
-  return { 
-    valores, 
-    valoresDetalhados: valoresEncontrados,
-    codigoSeguranca 
-  };
+  return qtdAtos;
 }
 
-const resultado = extrairDadosCompletos(textoSeloReal);
-
-console.log('');
-console.log('=== RESULTADO ===');
-console.log('Valores extraídos:', resultado.valores);
-console.log('Código de segurança:', resultado.codigoSeguranca);
-console.log('Detalhes dos valores:', JSON.stringify(resultado.valoresDetalhados, null, 2));
+const resultado = testarQuantidadeAtos(textoSeloReal);
