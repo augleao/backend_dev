@@ -2579,7 +2579,7 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
   try {
     console.log('[CONFIGURACOES SERVENTIA][GET] Valor recebido:', serventia, '| Length:', serventia.length);
     const [rows] = await pool.query(
-      'SELECT caixaUnificado FROM serventia WHERE nome = ? LIMIT 1',
+      'SELECT caixaUnificado FROM serventia WHERE nome_abreviado = ? LIMIT 1',
       [serventia]
     );
     console.log('[CONFIGURACOES SERVENTIA][GET] Resultado da query:', rows);
@@ -2598,7 +2598,7 @@ app.post('/api/configuracoes-serventia', async (req, res) => {
   try {
     console.log('[CONFIGURACOES SERVENTIA][POST] Body recebido:', req.body);
     await pool.query(
-      'UPDATE serventia SET caixaUnificado = ? WHERE nome = ?',
+      'UPDATE serventia SET caixaUnificado = ? WHERE nome_abreviado = ?',
       [!!caixa_unificado, serventia]
     );
     console.log('[CONFIGURACOES SERVENTIA][POST] Atualização realizada para:', serventia);
