@@ -2572,7 +2572,7 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
   }
 });
 
-//rota para obter a configuracao da serventia
+// GET: retorna config da serventia
 app.get('/api/configuracoes-serventia', async (req, res) => {
   const { serventia } = req.query;
   if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
