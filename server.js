@@ -3044,6 +3044,51 @@ app.post('/api/admin/render/postgres/:postgresId/export', authenticateAdmin, asy
 
 module.exports = router;
 
+// Rotas para entrega-servico
+app.post('/api/entrega-servico', authenticateAdmin, async (req, res) => {
+  const { protocolo, data, hora, retiradoPor, usuario } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO entrega_servico (protocolo, data, hora, retirado_por, usuario)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [protocolo, data, hora, retiradoPor, usuario]
+    );
+    res.json({ entrega: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar entrega', details: err.message });
+  }
+});
+
+app.put('/api/entrega-servico/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { data, hora, retiradoPor, usuario } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE entrega_servico SET data=$1, hora=$2, retirado_por=$3, usuario=$4 WHERE id=$5 RETURNING *`,
+      [data, hora, retiradoPor, usuario, id]
+    );
+    res.json({ entrega: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar entrega', details: err.message });
+  }
+});
+
+app.delete('/api/entrega-servico/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `DELETE FROM entrega_servico WHERE id=$1 RETURNING *`,
+      [id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Entrega não encontrada' });
+    }
+    res.json({ message: 'Entrega removida com sucesso', entrega: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover entrega', details: err.message });
+  }
+});
+
 // Remover execução de serviço por ID
 app.delete('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
