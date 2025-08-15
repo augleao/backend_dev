@@ -923,9 +923,20 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const serventia = req.query.serventia;
   const usuario = req.user;
 
-  if (!data) return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
-  if (!usuario) return res.status(401).json({ message: 'Usuário não autenticado.' });
-  if (!serventia) return res.status(400).json({ message: 'Parâmetro serventia é obrigatório.' });
+  console.log('[ATOS-PAGOS][GET] Parâmetros recebidos:', { data, serventia, usuario });
+
+  if (!data) {
+    console.warn('[ATOS-PAGOS][GET] Parâmetro data ausente');
+    return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
+  }
+  if (!usuario) {
+    console.warn('[ATOS-PAGOS][GET] Usuário não autenticado');
+    return res.status(401).json({ message: 'Usuário não autenticado.' });
+  }
+  if (!serventia) {
+    console.warn('[ATOS-PAGOS][GET] Parâmetro serventia ausente');
+    return res.status(400).json({ message: 'Parâmetro serventia é obrigatório.' });
+  }
 
   try {
     // 1. Verifica se a serventia está com caixa unificado
@@ -933,6 +944,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
       'SELECT caixaUnificado FROM serventia WHERE nome_abreviado = $1',
       [serventia]
     );
+    console.log('[ATOS-PAGOS][GET] Resultado configResult:', configResult.rows);
     const caixaUnificado = configResult.rows[0]?.caixaunificado;
 
     let result;
@@ -943,8 +955,10 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
         [serventia]
       );
       const nomesUsuarios = usuariosResult.rows.map(u => u.nome);
+      console.log('[ATOS-PAGOS][GET] nomesUsuarios:', nomesUsuarios);
 
       if (nomesUsuarios.length === 0) {
+        console.log('[ATOS-PAGOS][GET] Nenhum usuário encontrado para a serventia');
         return res.json({ CaixaDiario: [] });
       }
 
@@ -956,6 +970,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
          ORDER BY hora`,
         [data, nomesUsuarios]
       );
+      console.log('[ATOS-PAGOS][GET] Resultados atos pagos (unificado):', result.rows);
     } else {
       // 4. Apenas os atos do usuário logado
       result = await pool.query(
@@ -965,10 +980,11 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
          ORDER BY hora`,
         [data, usuario.nome]
       );
+      console.log('[ATOS-PAGOS][GET] Resultados atos pagos (usuário):', result.rows);
     }
     res.json({ CaixaDiario: result.rows });
   } catch (err) {
-    console.error('Erro ao buscar atos pagos:', err);
+    console.error('[ATOS-PAGOS][GET] Erro ao buscar atos pagos:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
