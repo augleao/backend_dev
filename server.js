@@ -1,3 +1,4 @@
+
 const express = require('express');
 const multer = require('multer');
 const { Pool } = require('pg');
@@ -2550,6 +2551,21 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erro ao buscar pedido.', details: err && err.message ? err.message : String(err) });
     }
+  }
+});
+
+// Compatível com frontend: busca configuração por query string
+app.get('/api/configuracoes-serventia', async (req, res) => {
+  const { serventia } = req.query;
+  if (!serventia) return res.status(400).json({ error: 'Parâmetro serventia é obrigatório' });
+  try {
+    const result = await pool.query(
+      'SELECT * FROM configuracoes_serventia WHERE serventia_nome = $1 LIMIT 1',
+      [serventia]
+    );
+    res.json(result.rows[0] || {});
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
   }
 });
 
