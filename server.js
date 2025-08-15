@@ -2503,6 +2503,20 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
         detalhes = [];
       }
     }
+    // Buscar entrega_servico pelo protocolo
+    let entrega = null;
+    try {
+      const entregaRes = await pool.query(
+        'SELECT id, protocolo, data, hora, retirado_por, usuario, criado_em FROM entrega_servico WHERE protocolo = $1 ORDER BY criado_em DESC LIMIT 1',
+        [p.protocolo]
+      );
+      if (entregaRes.rows.length > 0) {
+        entrega = entregaRes.rows[0];
+      }
+    } catch (e) {
+      entrega = null;
+    }
+
     const pedido = {
       protocolo: p.protocolo,
       tipo: p.tipo,
@@ -2528,7 +2542,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       combos,
       execucao: { status: '' },
       pagamento: { status: '' },
-      entrega: { data: '', hora: '' }
+      entrega
     };
     res.json({ pedido });
   } catch (err) {
