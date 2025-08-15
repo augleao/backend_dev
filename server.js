@@ -928,7 +928,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
   if (!serventia) return res.status(400).json({ message: 'Parâmetro serventia é obrigatório.' });
 
   try {
-    // Descobre se a serventia está com caixa unificado
+    // 1. Verifica se a serventia está com caixa unificado
     const configResult = await pool.query(
       'SELECT caixaUnificado FROM serventia WHERE nome = $1',
       [serventia]
@@ -937,14 +937,18 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
 
     let result;
     if (caixaUnificado) {
-      // Busca todos os usuários da serventia
+      // 2. Busca todos os usuários da serventia
       const usuariosResult = await pool.query(
         'SELECT nome FROM usuario WHERE serventia = $1',
         [serventia]
       );
       const nomesUsuarios = usuariosResult.rows.map(u => u.nome);
 
-      // Busca todos os atos do dia para esses usuários
+      if (nomesUsuarios.length === 0) {
+        return res.json({ CaixaDiario: [] });
+      }
+
+      // 3. Busca todos os atos do dia para esses usuários
       result = await pool.query(
         `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
          FROM atos_pagos
@@ -953,7 +957,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
         [data, nomesUsuarios]
       );
     } else {
-      // Apenas os atos do usuário logado
+      // 4. Apenas os atos do usuário logado
       result = await pool.query(
         `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
          FROM atos_pagos
