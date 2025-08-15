@@ -88,7 +88,7 @@ cron.schedule('* * * * *', async () => {
       try {
         // Requisição igual ao botão Realizar Backup Agora
         console.log(`[CRON][BACKUP] Disparando backup para ${row.postgres_id} às ${horaAtual}`);
-        await axios.post(`/api/admin/render/postgres/${row.postgres_id}/export`);
+  await axios.post(`https://backend-dev-ypsu.onrender.com/api/admin/render/postgres/${row.postgres_id}/export`);
         console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
         console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
