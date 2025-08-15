@@ -939,7 +939,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
     if (caixaUnificado) {
       // 2. Busca todos os usuários da serventia
       const usuariosResult = await pool.query(
-        'SELECT nome FROM user WHERE serventia = $1',
+        'SELECT nome FROM users WHERE serventia = $1',
         [serventia]
       );
       const nomesUsuarios = usuariosResult.rows.map(u => u.nome);
