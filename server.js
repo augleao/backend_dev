@@ -80,8 +80,9 @@ cron.schedule('* * * * *', async () => {
   for (const row of rows) {
     if (row.horario === horaAtual) {
       try {
-          console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
-  await axios.post(`http://localhost:3000/api/admin/render/postgres/${row.postgres_id}/export`);
+        // Requisição igual ao botão Realizar Backup Agora
+        await axios.post(`/api/admin/render/postgres/${row.postgres_id}/export`);
+        console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
         console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
       }
