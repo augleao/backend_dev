@@ -49,14 +49,14 @@ cron.schedule('* * * * *', async () => {
   try {
     const result = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
     rows = result.rows;
-    console.log('[CRON][BACKUP] Rows retornados do banco:', rows);
+      // ...
   } catch (err) {
     console.warn(`[API][serventias] Erro ao buscar backups agendados.`);
     erroQuery = true;
     console.error('Erro no agendamento de backup:', err);
   }
 
-  console.log('[CRON][BACKUP] horaAtual:', horaAtual);
+    // ...
 
   // Se não conseguiu buscar do banco ou não há linhas válidas, faz fallback para 00:01
   if (erroQuery || !rows.length) {
@@ -83,11 +83,11 @@ cron.schedule('* * * * *', async () => {
 
   // Comportamento normal: dispara backup conforme horário do banco
   for (const row of rows) {
-    console.log(`[CRON][BACKUP] Verificando row:`, row, '| horaAtual:', horaAtual);
+      // ...
     if (row.horario === horaAtual) {
       try {
         // Requisição igual ao botão Realizar Backup Agora
-        console.log(`[CRON][BACKUP] Disparando backup para ${row.postgres_id} às ${horaAtual}`);
+          // ...
         await axios.post(
           `https://api.render.com/v1/postgres/${row.postgres_id}/export`,
           {},
@@ -97,7 +97,7 @@ cron.schedule('* * * * *', async () => {
             }
           }
         );
-        console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
+          // ...
       } catch (err) {
         console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
       }
