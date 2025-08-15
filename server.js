@@ -2598,7 +2598,7 @@ app.post('/api/configuracoes-serventia', async (req, res) => {
   try {
     console.log('[CONFIGURACOES SERVENTIA][POST] Body recebido:', req.body);
     await pool.query(
-      'UPDATE serventia SET caixaUnificado = ? WHERE nome_abreviado = ?',
+      'UPDATE serventia SET caixaUnificado = $1 WHERE nome_abreviado = $2',
       [!!caixa_unificado, serventia]
     );
     console.log('[CONFIGURACOES SERVENTIA][POST] Atualização realizada para:', serventia);
