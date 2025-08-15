@@ -2625,23 +2625,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   }
 });
 
-// Compatível com frontend: busca configuração por query string
-app.get('/api/configuracoes-serventia', async (req, res) => {
-  const { serventia } = req.query;
-  if (!serventia) return res.status(400).json({ error: 'Parâmetro serventia é obrigatório' });
-  try {
-    console.log('[CONFIGURACOES SERVENTIA] Valor recebido:', serventia, '| Length:', serventia.length);
-    const result = await pool.query(
-      'SELECT * FROM configuracoes_serventia WHERE TRIM(LOWER(serventia_nome)) = TRIM(LOWER($1)) LIMIT 1',
-      [serventia]
-    );
-    console.log('[CONFIGURACOES SERVENTIA] Resultado da query:', result.rows);
-    res.json(result.rows[0] || {});
-  } catch (err) {
-    console.error('[CONFIGURACOES SERVENTIA] Erro:', err);
-    res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
-  }
-});
+
 
 // GET: retorna config da serventia
 app.get('/api/configuracoes-serventia', async (req, res) => {
