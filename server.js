@@ -2553,6 +2553,37 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
   }
 });
 
+// GET configurações da serventia
+app.get('/api/configuracoes-serventia/:serventia_nome', async (req, res) => {
+  const { serventia_nome } = req.params;
+  const [result] = await pool.query(
+    'SELECT * FROM configuracoes_serventia WHERE serventia_nome = ? LIMIT 1',
+    [serventia_nome]
+  );
+  res.json(result[0] || {});
+});
+
+// POST cria/atualiza configurações da serventia
+app.post('/api/configuracoes-serventia', async (req, res) => {
+  const { serventia_nome, caixa_unificado } = req.body;
+  const [rows] = await pool.query(
+    'SELECT id FROM configuracoes_serventia WHERE serventia_nome = ? LIMIT 1',
+    [serventia_nome]
+  );
+  if (rows.length > 0) {
+    await pool.query(
+      'UPDATE configuracoes_serventia SET caixa_unificado = ?, atualizado_em = CURRENT_TIMESTAMP WHERE serventia_nome = ?',
+      [caixa_unificado, serventia_nome]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO configuracoes_serventia (serventia_nome, caixa_unificado) VALUES (?, ?)',
+      [serventia_nome, caixa_unificado]
+    );
+  }
+  res.json({ success: true });
+});
+
 //rota para obter lista dos pedidos com o ultimo status
 app.get('/api/pedidos/:protocolo/status/ultimo', async (req, res) => {
   const { protocolo } = req.params;
