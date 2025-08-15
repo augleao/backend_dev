@@ -1038,14 +1038,24 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
   const usuarioAutenticado = req.user;
   const usuarioId = usuarioAutenticado.nome;
 
+  console.log('[ATOS-PAGOS][POST] Dados recebidos:', {
+    data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioId
+  });
+
   // Verificação para códigos 0001 e 0005
   if (codigo === '0001' || codigo === '0005') {
-    const existe = await pool.query(
-      `SELECT 1 FROM atos_pagos WHERE data = $1 AND usuario = $2 AND codigo = $3`,
-      [data, usuarioId, codigo]
-    );
-    if (existe.rowCount > 0) {
-      return res.status(409).json({ message: `Já existe um ato com código ${codigo} para este dia e usuário.` });
+    try {
+      const existe = await pool.query(
+        `SELECT 1 FROM atos_pagos WHERE data = $1 AND usuario = $2 AND codigo = $3`,
+        [data, usuarioId, codigo]
+      );
+      if (existe.rowCount > 0) {
+        console.warn('[ATOS-PAGOS][POST] Já existe ato com código', codigo, 'para', data, usuarioId);
+        return res.status(409).json({ message: `Já existe um ato com código ${codigo} para este dia e usuário.` });
+      }
+    } catch (err) {
+      console.error('[ATOS-PAGOS][POST] Erro ao verificar duplicidade:', err);
+      return res.status(500).json({ message: 'Erro ao verificar duplicidade.', details: err.message });
     }
   }
 
@@ -1057,10 +1067,11 @@ app.post('/api/atos-pagos', authenticate, async (req, res) => {
        RETURNING *`,
       [data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuarioId]
     );
+    console.log('[ATOS-PAGOS][POST] Sucesso ao inserir:', result.rows[0]);
     res.status(201).json({ atoPago: result.rows[0], message: 'Ato pago cadastrado com sucesso!' });
   } catch (err) {
-    console.error('Erro ao cadastrar ato pago:', err);
-    res.status(500).json({ message: 'Erro interno ao cadastrar ato pago.' });
+    console.error('[ATOS-PAGOS][POST] Erro ao cadastrar ato pago:', err);
+    res.status(500).json({ message: 'Erro interno ao cadastrar ato pago.', details: err.message });
   }
 });
 
