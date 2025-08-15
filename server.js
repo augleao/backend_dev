@@ -2576,23 +2576,37 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
 app.get('/api/configuracoes-serventia', async (req, res) => {
   const { serventia } = req.query;
   if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
-  const [rows] = await pool.query(
-    'SELECT caixaUnificado FROM serventia WHERE nome = ? LIMIT 1',
-    [serventia]
-  );
-  if (!rows || rows.length === 0) return res.json({});
-  res.json({ caixa_unificado: !!rows[0].caixaUnificado });
+  try {
+    console.log('[CONFIGURACOES SERVENTIA][GET] Valor recebido:', serventia, '| Length:', serventia.length);
+    const [rows] = await pool.query(
+      'SELECT caixaUnificado FROM serventia WHERE nome = ? LIMIT 1',
+      [serventia]
+    );
+    console.log('[CONFIGURACOES SERVENTIA][GET] Resultado da query:', rows);
+    if (!rows || rows.length === 0) return res.json({});
+    res.json({ caixa_unificado: !!rows[0].caixaUnificado });
+  } catch (err) {
+    console.error('[CONFIGURACOES SERVENTIA][GET] Erro:', err);
+    res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
+  }
 });
 
 // POST: atualiza config da serventia
 app.post('/api/configuracoes-serventia', async (req, res) => {
   const { serventia, caixa_unificado } = req.body;
   if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
-  await pool.query(
-    'UPDATE serventia SET caixaUnificado = ? WHERE nome = ?',
-    [!!caixa_unificado, serventia]
-  );
-  res.json({ ok: true });
+  try {
+    console.log('[CONFIGURACOES SERVENTIA][POST] Body recebido:', req.body);
+    await pool.query(
+      'UPDATE serventia SET caixaUnificado = ? WHERE nome = ?',
+      [!!caixa_unificado, serventia]
+    );
+    console.log('[CONFIGURACOES SERVENTIA][POST] Atualização realizada para:', serventia);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[CONFIGURACOES SERVENTIA][POST] Erro:', err);
+    res.status(500).json({ error: 'Erro ao atualizar configuração', details: err.message });
+  }
 });
 
 //rota para obter lista dos pedidos com o ultimo status
