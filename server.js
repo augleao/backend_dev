@@ -33,7 +33,6 @@ const createConferenciasTable = async () => {
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Tabela conferencias verificada/criada com sucesso');
   } catch (error) {
     // erro removido: logs só na api/serventias
   }
@@ -56,7 +55,6 @@ cron.schedule('* * * * *', async () => {
   // Se não conseguiu buscar do banco ou não há linhas válidas, faz fallback para 00:01
   if (erroQuery || !rows.length) {
     if (horaAtual === '00:01') {
-      console.log('[CRON][BACKUP] Fallback: disparando backup para todos os bancos ativos às 00:01');
       try {
     console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
         // Busca todos os postgres_id ativos (se possível)
@@ -70,7 +68,6 @@ cron.schedule('* * * * *', async () => {
         for (const postgresId of ids) {
           await axios.post(`http://localhost:3000/api/admin/render/postgres/${postgresId}/export`);
         }
-    console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
         console.error('[CRON][BACKUP] Erro no fallback de backup:', err);
       }
@@ -84,7 +81,6 @@ cron.schedule('* * * * *', async () => {
       try {
           console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
   await axios.post(`http://localhost:3000/api/admin/render/postgres/${row.postgres_id}/export`);
-        console.log(`[CRON][BACKUP] Backup disparado para ${row.postgres_id} às ${horaAtual}`);
       } catch (err) {
         console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
       }
@@ -93,17 +89,15 @@ cron.schedule('* * * * *', async () => {
 });
 
 async function extrairDadosSeloPorOCR(imagePath) {
-  console.log('[BACKEND] Iniciando OCR para:', imagePath);
   
   try {
     // Usar Tesseract com configurações melhoradas para OCR
     const { data: { text } } = await Tesseract.recognize(imagePath, 'por', {
-      logger: m => console.log('[OCR Progress]', m),
+  logger: m => {},
       tessedit_pageseg_mode: Tesseract.PSM.AUTO,
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
     });
     
-    console.log('[BACKEND] Texto extraído pelo OCR:', text);
     
     // Usar a função melhorada de extração
     const dadosExtraidos = extrairDadosSeloMelhorado(text);
@@ -130,7 +124,6 @@ function extrairDadosSeloMelhorado(texto) {
     .replace(/[^\w\s:.-]/g, ' ')  // Remove caracteres especiais exceto : . -
     .trim();
 
-  console.log('[OCR] Texto normalizado:', textoNormalizado);
 
   // === SELO DE CONSULTA ===
   const seloPatterns = [
@@ -210,7 +203,6 @@ function extrairDadosSeloMelhorado(texto) {
       // Valida se é um número razoável para quantidade de atos (1-999)
       if (numero > 0 && numero < 1000) {
         qtdAtos = numero;
-        console.log(`[OCR] Quantidade capturada: ${qtdAtos} (pattern: ${pattern})`);
         break;
       }
     }
@@ -224,7 +216,6 @@ function extrairDadosSeloMelhorado(texto) {
         const numero = parseInt(match[1], 10);
         if (numero > 0 && numero < 1000) {
           qtdAtos = numero;
-          console.log(`[OCR] Quantidade capturada (normalizado): ${qtdAtos} (pattern: ${pattern})`);
           break;
         }
       }
@@ -233,10 +224,8 @@ function extrairDadosSeloMelhorado(texto) {
 
   // Captura informações adicionais dos atos (códigos entre parênteses)
   if (qtdAtos !== null) {
-    console.log(`[OCR] Procurando códigos adicionais para quantidade: ${qtdAtos}`);
     
     // PRIMEIRO: Procurar e corrigir erros comuns do OCR
-    console.log(`[OCR] Verificando erros de OCR...`);
     
     // Padrão de erro comum: número seguido de 4+ dígitos e )
     // Ex: "117901)" deve ser "1(7901)"
@@ -252,7 +241,6 @@ function extrairDadosSeloMelhorado(texto) {
       const matches = [...texto.matchAll(pattern)];
       if (matches.length > 0) {
         for (const match of matches) {
-          console.log(`[OCR] Possível erro detectado: "${match[0]}"`);
           
           // Primeiro grupo: os 4 dígitos que devem ficar entre parênteses
           const codigo4Digitos = match[1];
@@ -266,7 +254,6 @@ function extrairDadosSeloMelhorado(texto) {
               qtdAtosCompleto += `, ${match[2]})`;
             }
             
-            console.log(`[OCR] ERRO CORRIGIDO: "${match[0]}" -> "${qtdAtosCompleto}"`);
             encontrado = true;
             break;
           }
@@ -292,7 +279,6 @@ function extrairDadosSeloMelhorado(texto) {
         const match = texto.match(pattern);
         if (match && match[0]) {
           qtdAtosCompleto = match[0].trim();
-          console.log(`[OCR] Códigos adicionais encontrados: ${qtdAtosCompleto}`);
           encontrado = true;
           break;
         }
@@ -304,7 +290,6 @@ function extrairDadosSeloMelhorado(texto) {
         const digitosMatch = texto.match(digitosProximosPattern);
         if (digitosMatch) {
           qtdAtosCompleto = `${qtdAtos}(${digitosMatch[1]})`;
-          console.log(`[OCR] Padrão alternativo encontrado: "${qtdAtosCompleto}"`);
         }
       }
     }
@@ -312,18 +297,14 @@ function extrairDadosSeloMelhorado(texto) {
 
   // Garantir que usemos qtdAtosCompleto quando disponível
   if (qtdAtosCompleto) {
-    console.log(`[OCR] Usando quantidade completa: "${qtdAtosCompleto}"`);
   } else if (qtdAtos !== null) {
-    console.log(`[OCR] Usando apenas número base: ${qtdAtos}`);
     qtdAtosCompleto = qtdAtos.toString();
   }
 
   // Log final para debug
-  console.log(`[OCR] Resultado final: qtdAtos=${qtdAtos}, qtdAtosCompleto="${qtdAtosCompleto}"`);
 
   // Usar qtdAtosCompleto (string) como valor principal para qtdAtos
   const qtdAtosFinal = qtdAtosCompleto || (qtdAtos ? qtdAtos.toString() : null);
-  console.log(`[OCR] Valor final para banco: "${qtdAtosFinal}"`);
 
   // === ATOS PRATICADOS POR ===
   const atosPorPatterns = [
@@ -339,7 +320,6 @@ function extrairDadosSeloMelhorado(texto) {
     if (match && match[1] && match[1].trim().length > 3) {
       let nome = match[1].trim();
       
-      console.log(`[OCR] Nome original: "${nome}"`);
       
       // Remove caracteres estranhos e lixo do OCR no final da linha
       nome = nome
