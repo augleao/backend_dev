@@ -2572,39 +2572,27 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
   }
 });
 
-// GET configurações da serventia
-app.get('/api/configuracoes-serventia/:serventia_nome', async (req, res) => {
-  const { serventia_nome } = req.params;
-  try {
-    const result = await pool.query(
-      'SELECT * FROM configuracoes_serventia WHERE serventia_nome = $1 LIMIT 1',
-      [serventia_nome]
-    );
-    res.json(result.rows[0] || {});
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
-  }
+//rota para obter a configuracao da serventia
+app.get('/api/configuracoes-serventia', async (req, res) => {
+  const { serventia } = req.query;
+  if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
+  const [rows] = await pool.query(
+    'SELECT caixaUnificado FROM serventia WHERE nome = ? LIMIT 1',
+    [serventia]
+  );
+  if (!rows || rows.length === 0) return res.json({});
+  res.json({ caixa_unificado: !!rows[0].caixaUnificado });
 });
 
-// POST cria/atualiza configurações da serventia
+// POST: atualiza config da serventia
 app.post('/api/configuracoes-serventia', async (req, res) => {
-  const { serventia_nome, caixa_unificado } = req.body;
-  const [rows] = await pool.query(
-    'SELECT id FROM configuracoes_serventia WHERE serventia_nome = ? LIMIT 1',
-    [serventia_nome]
+  const { serventia, caixa_unificado } = req.body;
+  if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
+  await pool.query(
+    'UPDATE serventia SET caixaUnificado = ? WHERE nome = ?',
+    [!!caixa_unificado, serventia]
   );
-  if (rows.length > 0) {
-    await pool.query(
-      'UPDATE configuracoes_serventia SET caixa_unificado = ?, atualizado_em = CURRENT_TIMESTAMP WHERE serventia_nome = ?',
-      [caixa_unificado, serventia_nome]
-    );
-  } else {
-    await pool.query(
-      'INSERT INTO configuracoes_serventia (serventia_nome, caixa_unificado) VALUES (?, ?)',
-      [serventia_nome, caixa_unificado]
-    );
-  }
-  res.json({ success: true });
+  res.json({ ok: true });
 });
 
 //rota para obter lista dos pedidos com o ultimo status
