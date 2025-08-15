@@ -2560,7 +2560,7 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
   if (!serventia) return res.status(400).json({ error: 'Parâmetro serventia é obrigatório' });
   try {
     const result = await pool.query(
-      'SELECT * FROM configuracoes_serventia WHERE serventia_nome = $1 LIMIT 1',
+      'SELECT * FROM configuracoes_serventia WHERE TRIM(LOWER(serventia_nome)) = TRIM(LOWER($1)) LIMIT 1',
       [serventia]
     );
     res.json(result.rows[0] || {});
