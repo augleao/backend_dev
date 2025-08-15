@@ -3047,6 +3047,7 @@ module.exports = router;
 // Rotas para entrega-servico
 app.post('/api/entrega-servico', authenticateAdmin, async (req, res) => {
   const { protocolo, data, hora, retiradoPor, usuario } = req.body;
+  console.log('REQ BODY ENTREGA:', req.body);
   try {
     const result = await pool.query(
       `INSERT INTO entrega_servico (protocolo, data, hora, retirado_por, usuario)
