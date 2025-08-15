@@ -1,3 +1,20 @@
+// Remover execução de serviço por ID
+app.delete('/api/execucao-servico/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Remove selos vinculados primeiro (se houver restrição de FK)
+    await pool.query('DELETE FROM selos_execucao_servico WHERE execucao_servico_id = $1', [id]);
+    // Remove a execução de serviço
+    const result = await pool.query('DELETE FROM execucao_servico WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Execução de serviço não encontrada' });
+    }
+    res.json({ message: 'Execução de serviço removida com sucesso', execucao: result.rows[0] });
+  } catch (err) {
+    console.error('Erro ao remover execução de serviço:', err);
+    res.status(500).json({ error: 'Erro ao remover execução de serviço', details: err.message });
+  }
+});
 const express = require('express');
 const multer = require('multer');
 const { Pool } = require('pg');
