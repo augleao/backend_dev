@@ -2572,11 +2572,15 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
 // GET configurações da serventia
 app.get('/api/configuracoes-serventia/:serventia_nome', async (req, res) => {
   const { serventia_nome } = req.params;
-  const [result] = await pool.query(
-    'SELECT * FROM configuracoes_serventia WHERE serventia_nome = ? LIMIT 1',
-    [serventia_nome]
-  );
-  res.json(result[0] || {});
+  try {
+    const result = await pool.query(
+      'SELECT * FROM configuracoes_serventia WHERE serventia_nome = $1 LIMIT 1',
+      [serventia_nome]
+    );
+    res.json(result.rows[0] || {});
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
+  }
 });
 
 // POST cria/atualiza configurações da serventia
