@@ -919,6 +919,57 @@ function authenticate(req, res, next) {
 
 // Rota para buscar atos pagos por data e usuário
 app.get('/api/atos-pagos', authenticate, async (req, res) => {
+  const data = req.query.data;
+  const serventia = req.query.serventia;
+  const usuario = req.user;
+
+  if (!data) return res.status(400).json({ message: 'Parâmetro data é obrigatório.' });
+  if (!usuario) return res.status(401).json({ message: 'Usuário não autenticado.' });
+  if (!serventia) return res.status(400).json({ message: 'Parâmetro serventia é obrigatório.' });
+
+  try {
+    // Descobre se a serventia está com caixa unificado
+    const configResult = await pool.query(
+      'SELECT caixaUnificado FROM serventia WHERE nome = $1',
+      [serventia]
+    );
+    const caixaUnificado = configResult.rows[0]?.caixaunificado;
+
+    let result;
+    if (caixaUnificado) {
+      // Busca todos os usuários da serventia
+      const usuariosResult = await pool.query(
+        'SELECT nome FROM usuario WHERE serventia = $1',
+        [serventia]
+      );
+      const nomesUsuarios = usuariosResult.rows.map(u => u.nome);
+
+      // Busca todos os atos do dia para esses usuários
+      result = await pool.query(
+        `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
+         FROM atos_pagos
+         WHERE data = $1 AND usuario = ANY($2)
+         ORDER BY hora`,
+        [data, nomesUsuarios]
+      );
+    } else {
+      // Apenas os atos do usuário logado
+      result = await pool.query(
+        `SELECT id, data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos, usuario
+         FROM atos_pagos
+         WHERE data = $1 AND usuario = $2
+         ORDER BY hora`,
+        [data, usuario.nome]
+      );
+    }
+    res.json({ CaixaDiario: result.rows });
+  } catch (err) {
+    console.error('Erro ao buscar atos pagos:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+/*
+app.get('/api/atos-pagos', authenticate, async (req, res) => {
   const data = req.query.data; // espera 'YYYY-MM-DD'
   console.log('Data recebida do frontend:', data);
   const usuario = req.user; // middleware authenticate define req.user
@@ -944,7 +995,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
-
+*/
 // Rota para adicionar um ato pago com usuário
 app.post('/api/atos-pagos', authenticate, async (req, res) => {
   const { data, hora, codigo, descricao, quantidade, valor_unitario, pagamentos } = req.body;
