@@ -2633,13 +2633,13 @@ app.get('/api/configuracoes-serventia', async (req, res) => {
   if (!serventia) return res.status(400).json({ error: 'serventia obrigatória' });
   try {
     console.log('[CONFIGURACOES SERVENTIA][GET] Valor recebido:', serventia, '| Length:', serventia.length);
-    const [rows] = await pool.query(
-      'SELECT caixaUnificado FROM serventia WHERE nome_abreviado = ? LIMIT 1',
+    const result = await pool.query(
+      'SELECT caixaUnificado FROM serventia WHERE nome_abreviado = $1 LIMIT 1',
       [serventia]
     );
-    console.log('[CONFIGURACOES SERVENTIA][GET] Resultado da query:', rows);
-    if (!rows || rows.length === 0) return res.json({});
-    res.json({ caixa_unificado: !!rows[0].caixaUnificado });
+    console.log('[CONFIGURACOES SERVENTIA][GET] Resultado da query:', result.rows);
+    if (!result.rows || result.rows.length === 0) return res.json({});
+    res.json({ caixa_unificado: !!result.rows[0].caixaunificado });
   } catch (err) {
     console.error('[CONFIGURACOES SERVENTIA][GET] Erro:', err);
     res.status(500).json({ error: 'Erro ao buscar configuração', details: err.message });
