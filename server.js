@@ -41,7 +41,9 @@ const createConferenciasTable = async () => {
 
 cron.schedule('* * * * *', async () => {
   const now = new Date();
-  const horaAtual = now.toTimeString().slice(0,5); // 'HH:MM'
+  // Ajuste para fuso horário -3 (Brasília)
+  const nowBRT = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const horaAtual = nowBRT.toTimeString().slice(0,5); // 'HH:MM' em Brasília
   let rows = [];
   let erroQuery = false;
   try {
