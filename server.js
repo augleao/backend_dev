@@ -930,7 +930,7 @@ app.get('/api/atos-pagos', authenticate, async (req, res) => {
   try {
     // 1. Verifica se a serventia está com caixa unificado
     const configResult = await pool.query(
-      'SELECT caixaUnificado FROM serventia WHERE nome = $1',
+      'SELECT caixaUnificado FROM serventia WHERE nome_abreviado = $1',
       [serventia]
     );
     const caixaUnificado = configResult.rows[0]?.caixaunificado;
