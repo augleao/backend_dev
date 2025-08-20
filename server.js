@@ -2750,7 +2750,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
       `SELECT 
          p.protocolo, p.descricao, p.prazo, p.criado_em, p.cliente_id, 
          p.valor_adiantado_detalhes,
-         c.nome as cliente_nome, c.telefone,
+         c.nome as cliente_nome, c.telefone, c.cpf,
          u.serventia as usuario_serventia,
          s.nome_abreviado, s.nome_completo, s.endereco, s.cnpj, 
          s.telefone as telefone_cartorio, s.email, s.whatsapp, s.cns
