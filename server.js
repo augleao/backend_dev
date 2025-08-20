@@ -2795,6 +2795,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
       pedido: {
         protocolo: pedido.protocolo,
         descricao: pedido.descricao,
+        prazo: pedido.prazo,
         criado_em: pedido.criado_em,
         valorAdiantadoDetalhes: detalhes,
         cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
