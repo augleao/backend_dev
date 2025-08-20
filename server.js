@@ -2748,7 +2748,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
     console.log(`[RECIBO] Buscando recibo para protocolo: ${protocolo}`);
     const pedidoRes = await pool.query(
       `SELECT 
-         p.protocolo, p.descricao, p.criado_em, p.cliente_id, 
+         p.protocolo, p.descricao, p.prazo, p.criado_em, p.cliente_id, 
          p.valor_adiantado_detalhes,
          c.nome as cliente_nome, c.telefone,
          u.serventia as usuario_serventia,
