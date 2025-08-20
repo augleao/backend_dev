@@ -2798,7 +2798,7 @@ app.get('/api/recibo/:protocolo', async (req, res) => {
         prazo: pedido.prazo,
         criado_em: pedido.criado_em,
         valorAdiantadoDetalhes: detalhes,
-        cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone },
+  cliente: { nome: pedido.cliente_nome, telefone: pedido.telefone, cpf: pedido.cpf },
         serventia: {
           nome_abreviado: pedido.nome_abreviado,
           nome_completo: pedido.nome_completo,
