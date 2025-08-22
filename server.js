@@ -2575,13 +2575,15 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
     const combosRes = await pool.query(`
       SELECT pc.combo_id, pc.ato_id, pc.quantidade, pc.codigo_tributario,
              pc.tipo_registro, pc.nome_registrados, pc.livro, pc.folha, pc.termo,
+             pc.valor_final, pc.issqn,
              c.nome as combo_nome,
-             a.codigo as ato_codigo, a.descricao as ato_descricao, a.valor_final
+             a.codigo as ato_codigo, a.descricao as ato_descricao
       FROM pedido_combos pc
       LEFT JOIN combos c ON pc.combo_id = c.id
       LEFT JOIN atos a ON pc.ato_id = a.id
       WHERE pc.pedido_id = $1
     `, [p.id]);
+    console.log('[PEDIDOS][GET] Combos retornados do banco:', combosRes.rows);
     const combos = combosRes.rows.map(row => ({
       combo_id: row.combo_id,
       combo_nome: row.combo_nome,
@@ -2589,6 +2591,7 @@ app.get('/api/pedidos/:protocolo', authenticate, async (req, res) => {
       ato_codigo: row.ato_codigo,
       ato_descricao: row.ato_descricao,
       valor_final: row.valor_final,
+      issqn: row.issqn,
       quantidade: row.quantidade,
       codigo_tributario: row.codigo_tributario,
       tipo_registro: row.tipo_registro,
