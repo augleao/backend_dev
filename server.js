@@ -906,11 +906,11 @@ app.get('/api/atos', authenticate, async (req, res) => {
   const search = req.query.search || ''; // Pega o parâmetro de busca da query string
   try {
     const result = await pool.query(
-      `SELECT id, codigo, descricao, valor_final FROM atos
+      `SELECT id, codigo, descricao, valor_final, issqn FROM atos
        WHERE codigo ILIKE $1 OR descricao ILIKE $1
        ORDER BY codigo
        LIMIT 20`,
-      [`%${search}%`] // Usa o parâmetro de busca na query
+      [`%${search}%`]
     );
     res.json({ atos: result.rows });
   } catch (err) {
