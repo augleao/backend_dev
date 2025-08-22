@@ -50,15 +50,10 @@ cron.schedule('* * * * *', async () => {
   try {
     const result = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
     rows = result.rows;
-    console.log('[CRON][BACKUP] Rows retornados do banco:', rows);
-    console.log('[CRON][BACKUP] api key:', RENDER_API_KEY);
   } catch (err) {
-    console.warn(`[API][serventias] Erro ao buscar backups agendados.`);
     erroQuery = true;
-    console.error('Erro no agendamento de backup:', err);
   }
 
-  console.log('[CRON][BACKUP] horaAtual:', horaAtual);
 
   // Se não conseguiu buscar do banco ou não há linhas válidas, faz fallback para 00:01
   if (erroQuery || !rows.length) {
@@ -73,16 +68,12 @@ cron.schedule('* * * * *', async () => {
           // ids = ['id1', 'id2'];
         }
         for (const postgresId of ids) {
-          console.log(`[CRON][BACKUP][FALLBACK] Disparando backup para ${postgresId} às ${horaAtual}`);
           try {
             const resp = await axios.post(`/api/admin/render/postgres/${postgresId}/export`);
-            console.log(`[CRON][BACKUP][FALLBACK] Resposta:`, resp.status, resp.data);
           } catch (err) {
-            console.error('[CRON][BACKUP][FALLBACK] Erro ao disparar backup:', err);
           }
         }
       } catch (err) {
-        console.error('[CRON][BACKUP] Erro no fallback de backup:', err);
       }
     }
     return;
@@ -90,10 +81,8 @@ cron.schedule('* * * * *', async () => {
 
   // Comportamento normal: dispara backup conforme horário do banco
   for (const row of rows) {
-    console.log(`[CRON][BACKUP] Verificando row:`, row, '| horaAtual:', horaAtual);
     if (row.horario === horaAtual) {
       try {
-        console.log(`[CRON][BACKUP] Disparando backup para ${row.postgres_id} às ${horaAtual}`);
         const resp = await axios.post(
           `https://api.render.com/v1/postgres/${row.postgres_id}/export`,
           {},
@@ -104,9 +93,7 @@ cron.schedule('* * * * *', async () => {
       }
           }
         );
-        console.log(`[CRON][BACKUP] Resposta:`, resp.status, resp.data);
       } catch (err) {
-        console.error(`[CRON][BACKUP] Erro ao disparar backup para ${row.postgres_id}:`, err);
       }
     }
   }
