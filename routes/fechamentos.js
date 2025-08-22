@@ -23,23 +23,29 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
   try {
     const usuario = req.user?.nome;
     const usuarios = req.query.usuarios; // Ex: "Ana,Beto,Carlos"
-    if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
+    console.log('--- [meus-fechamentos] INICIO ---');
+    console.log('Usuário autenticado:', usuario);
+    console.log('Query usuarios:', usuarios);
+
+    if (!usuario) {
+      console.log('Usuário não autenticado!');
+      return res.status(401).json({ erro: 'Usuário não autenticado' });
+    }
 
     let whereClause = '';
     let params = [];
     if (usuarios) {
-      // Caixa unificado: busca para todos os usuários informados
       const listaUsuarios = usuarios.split(',').map(u => u.trim());
+      console.log('Lista de usuários recebida:', listaUsuarios);
       whereClause = `usuario = ANY($1) AND codigo IN ('0001', '0005')`;
       params = [listaUsuarios];
     } else {
-      // Caixa individual: só do usuário logado
       whereClause = `usuario = $1 AND codigo IN ('0001', '0005')`;
       params = [usuario];
     }
 
-    const result = await pool.query(
-      `SELECT
+    const query = `
+      SELECT
         data,
         hora,
         codigo,
@@ -52,11 +58,18 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
       WHERE
         ${whereClause}
       ORDER BY
-        data DESC, hora DESC;`,
-      params
-    );
+        data DESC, hora DESC;
+    `;
+    console.log('Query executada:', query);
+    console.log('Parâmetros:', params);
+
+    const result = await pool.query(query, params);
+    console.log('Fechamentos encontrados:', result.rows);
+
     res.json({ fechamentos: result.rows });
+    console.log('--- [meus-fechamentos] FIM ---');
   } catch (err) {
+    console.error('Erro ao buscar fechamentos:', err);
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
   }
 });
