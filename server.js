@@ -2940,7 +2940,7 @@ const authenticateAdmin = async (req, res, next) => {
     }
     
     // Logar o valor do segredo JWT para depuração
-    console.log('JWT_SECRET em uso:', process.env.JWT_SECRET);
+    //console.log('JWT_SECRET em uso:', process.env.JWT_SECRET);
     // Verificar e decodificar o token
     const decoded = jwt.verify(token, JWT_SECRET);
     
