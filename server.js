@@ -40,6 +40,7 @@ const createConferenciasTable = async () => {
 }
 
 cron.schedule('* * * * *', async () => {
+  const RENDER_API_KEY = process.env.RENDER_API_KEY;
   const now = new Date();
   // Ajuste para fuso horário -3 (Brasília)
   const nowBRT = new Date(now.getTime() - 3 * 60 * 60 * 1000);
@@ -50,6 +51,7 @@ cron.schedule('* * * * *', async () => {
     const result = await pool.query('SELECT postgres_id, horario, ativo FROM backup_agendado WHERE ativo = true');
     rows = result.rows;
     console.log('[CRON][BACKUP] Rows retornados do banco:', rows);
+    console.log('[CRON][BACKUP] api key:', RENDER_API_KEY);
   } catch (err) {
     console.warn(`[API][serventias] Erro ao buscar backups agendados.`);
     erroQuery = true;
@@ -96,9 +98,10 @@ cron.schedule('* * * * *', async () => {
           `https://api.render.com/v1/postgres/${row.postgres_id}/export`,
           {},
           {
-            headers: {
-              Authorization: `Bearer ${process.env.RENDER_API_KEY}`
-            }
+      headers: {
+        'Authorization': `Bearer ${RENDER_API_KEY}`,
+        'Accept': 'application/json'
+      }
           }
         );
         console.log(`[CRON][BACKUP] Resposta:`, resp.status, resp.data);
