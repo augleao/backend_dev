@@ -22,9 +22,22 @@ const autenticar = (req, res, next) => {
 router.get('/meus-fechamentos', autenticar, async (req, res) => {
   try {
     const usuario = req.user?.nome;
+    const usuarios = req.query.usuarios; // Ex: "Ana,Beto,Carlos"
     if (!usuario) return res.status(401).json({ erro: 'Usuário não autenticado' });
 
-    // Busca atos pagos do usuário com codigo 0001 ou 0005
+    let whereClause = '';
+    let params = [];
+    if (usuarios) {
+      // Caixa unificado: busca para todos os usuários informados
+      const listaUsuarios = usuarios.split(',').map(u => u.trim());
+      whereClause = `usuario = ANY($1) AND codigo IN ('0001', '0005')`;
+      params = [listaUsuarios];
+    } else {
+      // Caixa individual: só do usuário logado
+      whereClause = `usuario = $1 AND codigo IN ('0001', '0005')`;
+      params = [usuario];
+    }
+
     const result = await pool.query(
       `SELECT
         data,
@@ -37,14 +50,11 @@ router.get('/meus-fechamentos', autenticar, async (req, res) => {
       FROM
         public.atos_pagos
       WHERE
-        usuario = $1
-        AND codigo IN ('0001', '0005')
+        ${whereClause}
       ORDER BY
         data DESC, hora DESC;`,
-      [usuario]
+      params
     );
-    console.log('Usuario:', usuario);
-    console.log('Fechamentos encontrados:', result.rows);
     res.json({ fechamentos: result.rows });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao buscar fechamentos' });
