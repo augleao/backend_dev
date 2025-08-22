@@ -2381,19 +2381,27 @@ app.post('/api/pedidos-criar', authenticate, async (req, res) => {
         
         // Adiciona novos combos
         if (Array.isArray(combos)) {
-          for (const combo of combos) {
-            await pool.query(`
-              INSERT INTO pedido_combos (
-                pedido_id, combo_id, ato_id, quantidade, codigo_tributario,
-                tipo_registro, nome_registrados, livro, folha, termo
-              )
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            `, [
-              pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario,
-              combo.tipo_registro || null, combo.nome_registrados || null, combo.livro || null, combo.folha || null, combo.termo || null
-            ]);
-          }
-        }
+  for (const combo of combos) {
+    // Busca valor_final e issqn do ato no banco
+    const atoRes = await pool.query(
+      'SELECT valor_final, issqn FROM atos WHERE id = $1',
+      [combo.ato_id]
+    );
+    const ato = atoRes.rows[0] || {};
+    await pool.query(`
+      INSERT INTO pedido_combos (
+        pedido_id, combo_id, ato_id, quantidade, codigo_tributario,
+        tipo_registro, nome_registrados, livro, folha, termo,
+        valor_final, issqn
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `, [
+      pedidoId, combo.combo_id, combo.ato_id, combo.quantidade, combo.codigo_tributario,
+      combo.tipo_registro || null, combo.nome_registrados || null, combo.livro || null, combo.folha || null, combo.termo || null,
+      ato.valor_final, ato.issqn
+    ]);
+  }
+}
         
         res.json({ message: 'Pedido atualizado com sucesso', protocolo, id: pedidoId });
         return;
