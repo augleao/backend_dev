@@ -30,13 +30,7 @@ if %errorlevel% neq 0 (
 echo.
 echo Passo 3: Substituindo conteudo atual pelo do backend_dev...
 echo ATENCAO: Isso vai sobrescrever todo o conteudo atual!
-set /p confirm="Tem certeza que deseja continuar? (S/N): "
-if /i not "%confirm%"=="S" (
-    echo Operacao cancelada pelo usuario.
-    git remote remove devrepo
-    pause
-    exit /b 0
-)
+git reset --hard devrepo/main
 
 git reset --hard devrepo/main
 if %errorlevel% neq 0 (
@@ -48,13 +42,7 @@ if %errorlevel% neq 0 (
 echo.
 echo Passo 4: Enviando alteracoes para o repositorio backend remoto...
 echo ATENCAO: Isso vai sobrescrever o historico do repositorio remoto!
-set /p confirm2="Confirma o push forcado? (S/N): "
-if /i not "%confirm2%"=="S" (
-    echo Push cancelado. Conteudo local foi atualizado mas nao enviado para o remoto.
-    git remote remove devrepo
-    pause
-    exit /b 0
-)
+git push origin main --force
 
 git push origin main --force
 if %errorlevel% neq 0 (
