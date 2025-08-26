@@ -2783,6 +2783,38 @@ app.post('/api/pedido_pagamento', async (req, res) => {
   }
 });
 
+// GET /pedido_pagamento/:protocolo
+app.get('/api/pedido_pagamento/:protocolo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM pedido_pagamento WHERE protocolo = $1 LIMIT 1',
+      [protocolo]
+    );
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar pagamento' });
+  }
+});
+
+// DELETE /pedido_pagamento/:protocolo
+app.delete('/api/pedido_pagamento/:protocolo', async (req, res) => {
+  const { protocolo } = req.params;
+  try {
+    const result = await pool.query(
+      'DELETE FROM pedido_pagamento WHERE protocolo = $1',
+      [protocolo]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir pagamento' });
+  }
+});
+
 
 //rota para buscar recibo do pedido
 app.get('/api/recibo/:protocolo', async (req, res) => {
