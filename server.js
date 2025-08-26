@@ -2756,7 +2756,7 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
 });
 
 // Criação do registro de pagamento
-app.post('/pedido_pagamento', async (req, res) => {
+app.post('/api/pedido_pagamento', async (req, res) => {
   try {
     const {
       protocolo,
