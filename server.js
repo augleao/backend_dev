@@ -2755,6 +2755,35 @@ app.post('/api/pedidos/:protocolo/status', async (req, res) => {
   }
 });
 
+// Criação do registro de pagamento
+app.post('/pedido_pagamento', async (req, res) => {
+  try {
+    const {
+      protocolo,
+      valorAtos,
+      valorAdicional,
+      totalAdiantado,
+      usuario,
+      data,
+      hora
+    } = req.body;
+
+    // Exemplo para PostgreSQL
+    await pool.query(
+      `INSERT INTO pedido_pagamento
+        (protocolo, valor_atos, valor_adicional, total_adiantado, usuario, data, hora)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [protocolo, valorAtos, valorAdicional, totalAdiantado, usuario, data, hora]
+    );
+
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error('Erro ao salvar pedido_pagamento:', err);
+    res.status(500).json({ error: 'Erro ao salvar pagamento' });
+  }
+});
+
+
 //rota para buscar recibo do pedido
 app.get('/api/recibo/:protocolo', async (req, res) => {
   const { protocolo } = req.params;
