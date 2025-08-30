@@ -99,20 +99,22 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
+const { preprocessImage } = require('./utils/imagePreprocess');
+
 async function extrairDadosSeloPorOCR(imagePath) {
-  
   try {
+    // Pré-processa a imagem antes do OCR
+    const preprocessedPath = await preprocessImage(imagePath);
     // Usar Tesseract com configurações melhoradas para OCR
-    const { data: { text } } = await Tesseract.recognize(imagePath, 'por', {
-  logger: m => {},
+    const { data: { text } } = await Tesseract.recognize(preprocessedPath, 'por', {
+      logger: m => {},
       tessedit_pageseg_mode: Tesseract.PSM.AUTO,
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
     });
-    
-    
     // Usar a função melhorada de extração
     const dadosExtraidos = extrairDadosSeloMelhorado(text);
-    
+    // (Opcional) Remover arquivo temporário pré-processado
+    try { require('fs').unlinkSync(preprocessedPath); } catch (e) {}
     return dadosExtraidos;
   } catch (error) {
     console.error('[BACKEND] Erro no OCR:', error);
