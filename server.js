@@ -113,12 +113,13 @@ async function extrairDadosSeloPorOCR(imagePath) {
     if (pythonResult.error) {
       throw pythonResult.error;
     }
-    const text = pythonResult.stdout;
-    // Usar a função melhorada de extração
-    const dadosExtraidos = extrairDadosSeloMelhorado(text);
+  const text = pythonResult.stdout;
+  console.log('[OCR][RAW] Texto retornado pelo EasyOCR:', text);
+  // Usar a função melhorada de extração
+  const dadosExtraidos = extrairDadosSeloMelhorado(text);
     // (Opcional) Remover arquivo temporário pré-processado
     try { require('fs').unlinkSync(preprocessedPath); } catch (e) {}
-    return dadosExtrairos;
+  return dadosExtraidos;
   } catch (error) {
     console.error('[BACKEND] Erro no OCR/EasyOCR:', error);
     return {
