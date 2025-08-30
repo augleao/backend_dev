@@ -131,6 +131,19 @@ async function extrairDadosSeloPorOCR(imagePath) {
 
 // Função auxiliar melhorada para extração de dados
 function extrairDadosSeloMelhorado(texto) {
+  // Priorizar extração direta do campo qtdAtos: valor até a quebra de linha
+  // qtdAtos e qtdAtosCompleto já declarados no início da função
+  const matchQtd = texto.match(/qtdAtos:\s*([^\n\r]+)/i);
+  if (matchQtd && matchQtd[1]) {
+    qtdAtos = matchQtd[1].trim();
+  }
+
+  // ...restante da função (mantendo os padrões antigos caso não encontre)
+  // Se não encontrou pelo padrão direto, tenta os padrões antigos
+  if (!qtdAtos) {
+    // (mantém os padrões antigos já existentes aqui)
+    // ...existing code...
+  }
   // Normalizar o texto: remover caracteres especiais e normalizar espaços
   const textoNormalizado = texto
     .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
@@ -205,8 +218,7 @@ function extrairDadosSeloMelhorado(texto) {
     /(\d+)\s+[A-Za-z]+/i
   ];
 
-  let qtdAtos = null;
-  let qtdAtosCompleto = '';
+  // Removido: já declarado no início da função
   
   // Primeiro tenta padrões específicos no texto original
   for (const pattern of qtdPatterns) {
