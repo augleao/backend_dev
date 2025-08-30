@@ -2792,15 +2792,15 @@ app.get('/api/pedido_pagamento/:protocolo', async (req, res) => {
     );
     if (result.rows.length > 0) {
       const pagamento = result.rows[0];
-      // Se houver complemento_pagamento, converte de JSON para objeto
+      // Padronizar para sempre retornar no campo complementos_pagamento (plural)
       if (pagamento.complemento_pagamento) {
         try {
-          pagamento.complementos = JSON.parse(pagamento.complemento_pagamento);
+          pagamento.complementos_pagamento = JSON.parse(pagamento.complemento_pagamento);
         } catch (e) {
-          pagamento.complementos = null;
+          pagamento.complementos_pagamento = null;
         }
       } else {
-        pagamento.complementos = null;
+        pagamento.complementos_pagamento = null;
       }
       res.json(pagamento);
     } else {
