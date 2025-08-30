@@ -3434,18 +3434,10 @@ app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.sing
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // 1. Realize o OCR na imagem usando tesseract.js
-    const ocrResult = await Tesseract.recognize(path, 'por', {
-      logger: m => console.log('[OCR Progress]', m),
-      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
-    });
-    const textoOCR = ocrResult.data.text;
-    console.log('[BACKEND] Texto extraído do OCR:', textoOCR);
 
-    // 2. Extraia os dados do texto OCR
-    const dadosExtraidos = extrairDadosSeloMelhorado(textoOCR);
-    console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
+  // 1. Realize o OCR na imagem usando EasyOCR
+  const dadosExtraidos = await extrairDadosSeloPorOCR(path);
+  console.log('[BACKEND] Dados extraídos do OCR:', dadosExtraidos);
 
     // 3. Salve apenas os dados extraídos do OCR no banco (sem imagem_url)
     const result = await pool.query(
@@ -3520,28 +3512,12 @@ app.post('/api/teste-ocr', upload.single('imagem'), async (req, res) => {
     const { path } = req.file;
     console.log('[TESTE OCR] Processando arquivo:', path);
 
-    // Realizar OCR melhorado
-    const ocrResult = await Tesseract.recognize(path, 'por', {
-      logger: m => console.log('[OCR Progress]', m),
-      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
-    });
-    
-    const textoOCR = ocrResult.data.text;
-    console.log('[TESTE OCR] Texto bruto extraído:', textoOCR);
 
-    // Extrair dados com algoritmo melhorado
-    const dadosExtraidos = extrairDadosSeloMelhorado(textoOCR);
-    
+    // Realizar OCR usando EasyOCR
+    const dadosExtraidos = await extrairDadosSeloPorOCR(path);
     res.json({
       success: true,
-      textoOcr: textoOCR,
-      dadosExtraidos: dadosExtraidos,
-      qualidade: {
-        confidence: ocrResult.data.confidence,
-        lines: ocrResult.data.lines?.length || 0,
-        words: ocrResult.data.words?.length || 0
-      }
+      dadosExtraidos: dadosExtraidos
     });
 
   } catch (error) {
