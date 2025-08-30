@@ -2352,7 +2352,7 @@ app.post('/api/pedidos-criar', authenticate, async (req, res) => {
   try {
     const { 
       protocolo, tipo, descricao, prazo, clienteId, valorAdiantado, valorAdiantadoDetalhes, observacao, 
-      combos, usuario, origem, origemInfo, valorAdicional
+      combos, usuario, origem, origemInfo 
     } = req.body;
 
     console.log('[POST] /api/pedidos - dados recebidos:', {
@@ -2372,9 +2372,9 @@ app.post('/api/pedidos-criar', authenticate, async (req, res) => {
         // Atualiza o pedido
         await pool.query(`
           UPDATE pedidos 
-          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10, valor_adicional = $11
-          WHERE id = $12
-        `, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, valorAdicional, pedidoId]);
+          SET tipo = $1, descricao = $2, prazo = $3, cliente_id = $4, valor_adiantado = $5, valor_adiantado_detalhes = $6, observacao = $7, usuario = $8, origem = $9, origem_info = $10
+          WHERE id = $11
+        `, [tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, pedidoId]);
 
         // Remove combos antigos
         await pool.query('DELETE FROM pedido_combos WHERE pedido_id = $1', [pedidoId]);
@@ -2415,10 +2415,10 @@ app.post('/api/pedidos-criar', authenticate, async (req, res) => {
 
     // Criação do novo pedido com os novos campos
     const result = await pool.query(`
-      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info, valor_adicional)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO pedidos (protocolo, tipo, descricao, prazo, cliente_id, valor_adiantado, valor_adiantado_detalhes, observacao, usuario, origem, origem_info)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
-    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo, valorAdicional]);
+    `, [novoProtocolo, tipo, descricao, prazo, clienteId, valorAdiantado, JSON.stringify(valorAdiantadoDetalhes), observacao, usuario, origem, origemInfo]);
     const pedidoId = result.rows[0].id;
 
     // Inserir combos se houver
@@ -2502,7 +2502,6 @@ app.get('/api/pedidos', authenticate, async (req, res) => {
         descricao: p.descricao,
         valor_adiantado: p.valor_adiantado,
         valorAdiantadoDetalhes: valorAdiantadoDetalhes,
-        valorAdicional: p.valor_adicional,
         usuario: p.usuario,
         observacao: p.observacao,
         origem: p.origem,
@@ -2765,15 +2764,15 @@ app.post('/api/pedido_pagamento', async (req, res) => {
       totalAdiantado,
       usuario,
       data,
-      hora
+      hora,
+      complementos // novo campo JSON
     } = req.body;
 
-    // Exemplo para PostgreSQL
     await pool.query(
       `INSERT INTO pedido_pagamento
-        (protocolo, valor_atos, valor_adicional, total_adiantado, usuario, data, hora)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [protocolo, valorAtos, valorAdicional, totalAdiantado, usuario, data, hora]
+        (protocolo, valor_atos, valor_adicional, total_adiantado, usuario, data, hora, complemento_pagamento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [protocolo, valorAtos, valorAdicional, totalAdiantado, usuario, data, hora, complementos ? JSON.stringify(complementos) : null]
     );
 
     res.status(201).json({ success: true });
