@@ -12,7 +12,7 @@ const path = require('path');
 const app = express();
 const axios = require('axios');
 const cron = require('node-cron');
-const Tesseract = require('tesseract.js');
+const { spawnSync } = require('child_process');
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 
 //const port = process.env.PORT || 3001;
@@ -105,19 +105,22 @@ async function extrairDadosSeloPorOCR(imagePath) {
   try {
     // Pré-processa a imagem antes do OCR
     const preprocessedPath = await preprocessImage(imagePath);
-    // Usar Tesseract com configurações melhoradas para OCR
-    const { data: { text } } = await Tesseract.recognize(preprocessedPath, 'por', {
-      logger: m => {},
-      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ:.,- ()',
+    // Chama o script Python do EasyOCR
+    const pythonResult = spawnSync('python', ['easyocr_ocr.py', preprocessedPath], {
+      cwd: __dirname,
+      encoding: 'utf-8'
     });
+    if (pythonResult.error) {
+      throw pythonResult.error;
+    }
+    const text = pythonResult.stdout;
     // Usar a função melhorada de extração
     const dadosExtraidos = extrairDadosSeloMelhorado(text);
     // (Opcional) Remover arquivo temporário pré-processado
     try { require('fs').unlinkSync(preprocessedPath); } catch (e) {}
-    return dadosExtraidos;
+    return dadosExtrairos;
   } catch (error) {
-    console.error('[BACKEND] Erro no OCR:', error);
+    console.error('[BACKEND] Erro no OCR/EasyOCR:', error);
     return {
       seloConsulta: '',
       codigoSeguranca: '',
@@ -131,19 +134,6 @@ async function extrairDadosSeloPorOCR(imagePath) {
 
 // Função auxiliar melhorada para extração de dados
 function extrairDadosSeloMelhorado(texto) {
-  // Priorizar extração direta do campo qtdAtos: valor até a quebra de linha
-  // qtdAtos e qtdAtosCompleto já declarados no início da função
-  const matchQtd = texto.match(/qtdAtos:\s*([^\n\r]+)/i);
-  if (matchQtd && matchQtd[1]) {
-    qtdAtos = matchQtd[1].trim();
-  }
-
-  // ...restante da função (mantendo os padrões antigos caso não encontre)
-  // Se não encontrou pelo padrão direto, tenta os padrões antigos
-  if (!qtdAtos) {
-    // (mantém os padrões antigos já existentes aqui)
-    // ...existing code...
-  }
   // Normalizar o texto: remover caracteres especiais e normalizar espaços
   const textoNormalizado = texto
     .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
@@ -218,7 +208,8 @@ function extrairDadosSeloMelhorado(texto) {
     /(\d+)\s+[A-Za-z]+/i
   ];
 
-  // Removido: já declarado no início da função
+  let qtdAtos = null;
+  let qtdAtosCompleto = '';
   
   // Primeiro tenta padrões específicos no texto original
   for (const pattern of qtdPatterns) {
