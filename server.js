@@ -2791,7 +2791,18 @@ app.get('/api/pedido_pagamento/:protocolo', async (req, res) => {
       [protocolo]
     );
     if (result.rows.length > 0) {
-      res.json(result.rows[0]);
+      const pagamento = result.rows[0];
+      // Se houver complemento_pagamento, converte de JSON para objeto
+      if (pagamento.complemento_pagamento) {
+        try {
+          pagamento.complementos = JSON.parse(pagamento.complemento_pagamento);
+        } catch (e) {
+          pagamento.complementos = null;
+        }
+      } else {
+        pagamento.complementos = null;
+      }
+      res.json(pagamento);
     } else {
       res.status(404).json({ error: 'Pagamento não encontrado' });
     }
