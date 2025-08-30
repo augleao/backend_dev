@@ -18,6 +18,7 @@ import os
 import easyocr
 
 def main():
+    print(f'[PYTHON][INFO] Versão do Python: {sys.executable} - {sys.version}')
     print(f'[PYTHON][INFO] Iniciando OCR para: {sys.argv[1] if len(sys.argv) > 1 else "(sem argumento)"}')
     if len(sys.argv) < 2:
         print('[PYTHON][ERRO] Caminho da imagem não fornecido.')
