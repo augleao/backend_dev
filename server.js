@@ -3282,17 +3282,17 @@ app.post('/api/entrega-servico', authenticateAdmin, async (req, res) => {
 });
 
 // Rota GET para buscar entrega_servico por id
-app.get('/api/entrega-servico/:id', authenticateAdmin, async (req, res) => {
-  const { id } = req.params;
+app.get('/api/entrega-servico/:protocolo', authenticateAdmin, async (req, res) => {
+  const { protocolo } = req.params;
   try {
     const result = await pool.query(
-      'SELECT * FROM entrega_servico WHERE id = $1',
-      [id]
+      'SELECT * FROM entrega_servico WHERE protocolo = $1',
+      [protocolo]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Entrega não encontrada' });
     }
-    res.json({ entrega: result.rows[0] });
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar entrega', details: err.message });
   }
