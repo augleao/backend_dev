@@ -1560,6 +1560,12 @@ app.post('/api/login', async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    // Verifica se o usuário está ativo
+    if (user.status !== 'ativo') {
+      return res.status(403).json({ message: 'Usuário inativo. Contate o administrador.' });
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     
     if (!passwordMatch) {
