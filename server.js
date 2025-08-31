@@ -441,8 +441,6 @@ async function extrairDadosSeloPorOCR(imagePath) {
 }*/
 
 function extrairDadosSeloMelhorado(texto) {
-  // Não vamos mais pré-processar o texto para manter as quebras de linha,
-  // o que é crucial para separar campos como "atos" e "valores".
 
   // ================= SELO DE CONSULTA =================
   const seloMatch = texto.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
@@ -457,17 +455,10 @@ function extrairDadosSeloMelhorado(texto) {
   const qtdBaseMatch = texto.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
   if (qtdBaseMatch) {
     const qtdBase = qtdBaseMatch[1];
-    // Procura por códigos na linha seguinte, como "1(7802), 117901)" ou "117101)"
+    // Procura por uma linha que comece com números e parênteses, logo após a qtd.
     const linhaAtosMatch = texto.match(new RegExp(qtdBase + "[^\\n]*\\)"));
     if (linhaAtosMatch) {
-        // Tenta corrigir o padrão "117101)" para "1(7101)"
-        const correcaoMatch = linhaAtosMatch[0].match(new RegExp(`^${qtdBase}(\\d{4})\\)`));
-        if (correcaoMatch) {
-            qtdAtosFinal = `${qtdBase}(${correcaoMatch[1]})`;
-        } else {
-            // Se já estiver no formato "1(7101)" ou similar, usa diretamente
-            qtdAtosFinal = linhaAtosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
-        }
+        qtdAtosFinal = linhaAtosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
     } else {
       qtdAtosFinal = qtdBase;
     }
@@ -475,23 +466,24 @@ function extrairDadosSeloMelhorado(texto) {
 
   // ================= ATOS PRATICADOS POR =================
   let atosPraticadosPor = '';
-  // Captura o nome que vem depois de "por:" e para no final da linha (antes do \n)
-  // ou antes do hífen do cargo.
   const atosPorMatch = texto.match(/por[:\s]*(.*?)(?:\s*-|\n|\r)/i);
   if (atosPorMatch && atosPorMatch[1]) {
     atosPraticadosPor = atosPorMatch[1].trim();
   }
 
-  // ================= VALORES (LÓGICA CORRIGIDA E FINAL) =================
+  // ================= VALORES (LÓGICA DEFINITIVA) =================
   let valores = '';
-  // A regex agora procura por uma linha que PODE começar com "|- " e DEVE conter "Emol." e "Total".
-  // O modificador 'm' (multiline) é essencial para que '^' corresponda ao início de uma LINHA, não do texto todo.
-  const valoresMatch = texto.match(/^.*Emol\..*Total\..*$/im);
+  // A linha de valores é a que contém "Emol." e o símbolo "R$".
+  // Esta é a regex mais robusta que podemos criar para este padrão.
+  // O modificador 'm' (multiline) é crucial.
+  const valoresMatch = texto.match(/^.*Emol\..*R\$.*$/im);
+  
   if (valoresMatch && valoresMatch[0]) {
     valores = valoresMatch[0]
-      .replace(/^\|-\s*/, '') // Remove o prefixo "|- " se existir no início da linha
-      .replace(/\s+[A-Za-z]+$/, '') // Remove lixo de texto no final da linha (ex: MAcugttiia)
-      .replace(/\s\s+/g, ' ') // Normaliza espaços
+      .replace(/^[^A-Za-z0-9]+/, '') // Remove qualquer lixo no início da linha (como '|- ' ou '-').
+      .replace(/\s+[A-Za-z]{2,}\s*$/, '') // Remove lixo de texto no final (ex: "EE MESA").
+      .replace(/-1SS/i, '- ISS') // Corrige o erro de OCR comum "1SS" para "ISS".
+      .replace(/\s\s+/g, ' ') // Normaliza espaços.
       .trim();
   }
 
@@ -505,7 +497,7 @@ function extrairDadosSeloMelhorado(texto) {
     textoCompleto: texto
   };
 
-  console.log('[OCR] Resultado da extração (v4 - Final):', resultado);
+  console.log('[OCR] Resultado da extração (v5 - Definitiva):', resultado);
   
   return resultado;
 }
