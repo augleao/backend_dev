@@ -333,8 +333,12 @@ function extrairDadosSeloMelhorado(texto) {
     const match = texto.match(pattern);  // Usando texto original para nomes
     if (match && match[1] && match[1].trim().length > 3) {
       let nome = match[1].trim();
-      
-      
+      // Corta no primeiro '\n', '\r' ou '-' (o que vier primeiro)
+      const corteRegex = /[\n\r\-]/;
+      const corteIdx = nome.search(corteRegex);
+      if (corteIdx !== -1) {
+        nome = nome.substring(0, corteIdx).trim();
+      }
       // Remove caracteres estranhos e lixo do OCR no final da linha
       nome = nome
         // Remove tudo após hífen seguido de texto minúsculo (provável lixo do OCR)
