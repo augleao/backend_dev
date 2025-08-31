@@ -1885,10 +1885,17 @@ app.put('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req,
 app.delete('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM public.users WHERE id = $1', [id]);
+    const result = await pool.query('DELETE FROM public.users WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
     res.json({ message: 'Usuário excluído com sucesso.' });
   } catch (err) {
     console.error('Erro ao excluir usuário:', err);
+    // Verifica erro de integridade referencial (Postgres)
+    if (err.code === '23503') {
+      return res.status(400).json({ message: 'Não é possível excluir: usuário vinculado a outros registros.' });
+    }
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
