@@ -131,7 +131,7 @@ async function extrairDadosSeloPorOCR(imagePath) {
 }
 
 // Função auxiliar melhorada para extração de dados
-function extrairDadosSeloMelhorado(texto) {
+/*function extrairDadosSeloMelhorado(texto) {
   // Normalizar o texto: remover caracteres especiais e normalizar espaços
   const textoNormalizado = texto
     .replace(/\s+/g, ' ')  // Múltiplos espaços para um só
@@ -438,7 +438,108 @@ function extrairDadosSeloMelhorado(texto) {
   });
   
   return resultado;
+}*/
+
+function extrairDadosSeloMelhorado(texto) {
+  // Normalizar o texto: remover múltiplos espaços e alguns caracteres indesejados
+  const textoNormalizado = texto.replace(/\s+/g, ' ').trim();
+
+  // ================= SELO DE CONSULTA =================
+  let seloConsulta = '';
+  const seloMatch = textoNormalizado.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
+  if (seloMatch && seloMatch[1]) {
+    seloConsulta = seloMatch[1];
+  }
+
+  // ================= CÓDIGO DE SEGURANÇA =================
+  let codigoSeguranca = '';
+  // Padrão mais robusto para o formato com pontos
+  const codigoMatch = texto.match(/(\d{4}\.\d{4}\.\d{4}\.\d{4})/);
+  if (codigoMatch && codigoMatch[1]) {
+    codigoSeguranca = codigoMatch[1];
+  }
+
+  // ================= QUANTIDADE DE ATOS =================
+  let qtdAtos = null;
+  let qtdAtosCompleto = '';
+
+  // Tenta encontrar a quantidade base (ex: "1")
+  const qtdBaseMatch = texto.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
+  if (qtdBaseMatch && qtdBaseMatch[1]) {
+    qtdAtos = parseInt(qtdBaseMatch[1], 10);
+  }
+
+  if (qtdAtos !== null) {
+    // Padrão para corrigir erro de OCR como "117101)" para "1(7101)"
+    const erroOcrPattern = new RegExp(`\\b${qtdAtos}(\\d{4})\\)`);
+    const erroMatch = texto.match(erroOcrPattern);
+    if (erroMatch && erroMatch[1]) {
+      qtdAtosCompleto = `${qtdAtos}(${erroMatch[1]})`;
+    } else {
+      // Se não houver erro, procura o padrão correto como "1(7101)"
+      const corretoMatch = texto.match(new RegExp(`${qtdAtos}\\s*\\((\\d{4,})\\)`));
+      if (corretoMatch) {
+        qtdAtosCompleto = corretoMatch[0];
+      }
+    }
+  }
+  
+  // Fallback se a lógica acima falhar
+  if (!qtdAtosCompleto && qtdAtos) {
+    qtdAtosCompleto = qtdAtos.toString();
+  }
+  
+  const qtdAtosFinal = qtdAtosCompleto || (qtdAtos ? qtdAtos.toString() : null);
+
+
+  // ================= ATOS PRATICADOS POR (LÓGICA CORRIGIDA) =================
+  let atosPraticadosPor = '';
+  // Regex ajustada para capturar o nome e o cargo, parando antes do lixo do OCR
+  const atosPorMatch = texto.match(/Ato\(s\)\s*Praticado\(s\)\s*por[:\s]*(.+?)\s*-\s*([A-Za-z\sÀ-ÿ-]+)/i);
+  
+  if (atosPorMatch && atosPorMatch[1] && atosPorMatch[2]) {
+    // Concatena o nome e o cargo, que foram capturados em grupos separados
+    let nomeCompleto = `${atosPorMatch[1].trim()} - ${atosPorMatch[2].trim()}`;
+    
+    // Limpeza final para remover qualquer "lixo" remanescente no final da string
+    // Remove palavras estranhas ou caracteres aleatórios no final.
+    nomeCompleto = nomeCompleto.replace(/\s+[A-Z]{2,}[a-z]+[A-Z]+[a-z]*[A-Z]*[a-z]*\s*$/g, '').trim();
+    
+    atosPraticadosPor = nomeCompleto;
+  }
+
+
+  // ================= VALORES =================
+  const valoresEncontrados = [];
+  // Expressão regular para encontrar todas as linhas de valores de uma vez
+  const valoresMatch = texto.match(/Emol\..*?Total\..*?ISS\..*/i);
+  
+  let valores = '';
+  if (valoresMatch) {
+    // Limpa a string de valores, removendo lixo e normalizando
+    valores = valoresMatch[0]
+      .replace(/\|-\s*/, '') // Remove "|- " do início
+      .replace(/\s\s+/g, ' ') // Remove espaços extras
+      .replace(/MAcugttiia|fopetatas/gi, '') // Remove lixo conhecido
+      .trim();
+  }
+
+
+  // ================= RESULTADO FINAL =================
+  const resultado = {
+    seloConsulta,
+    codigoSeguranca,
+    qtdAtos: qtdAtosFinal,
+    atosPraticadosPor,
+    valores,
+    textoCompleto: texto
+  };
+
+  console.log('[OCR] Resultado da extração (versão corrigida):', resultado);
+  
+  return resultado;
 }
+
 
 // Executar criação da tabela
 //createConferenciasTable();
