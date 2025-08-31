@@ -455,10 +455,9 @@ function extrairDadosSeloMelhorado(texto) {
   const qtdBaseMatch = texto.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
   if (qtdBaseMatch) {
     const qtdBase = qtdBaseMatch[1];
-    // Procura por uma linha que comece com números e parênteses, logo após a qtd.
     const linhaAtosMatch = texto.match(new RegExp(qtdBase + "[^\\n]*\\)"));
     if (linhaAtosMatch) {
-        qtdAtosFinal = linhaAtosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
+        qtdAtosFinal = linhaAtosMatch[0].replace(/\s+[a-z]{2,}\s*$/i, '').trim();
     } else {
       qtdAtosFinal = qtdBase;
     }
@@ -471,21 +470,45 @@ function extrairDadosSeloMelhorado(texto) {
     atosPraticadosPor = atosPorMatch[1].trim();
   }
 
-  // ================= VALORES (LÓGICA DEFINITIVA) =================
+  // ================= VALORES (LÓGICA FINAL PARA MÚLTIPLAS LINHAS) =================
   let valores = '';
-  // A linha de valores é a que contém "Emol." e o símbolo "R$".
-  // Esta é a regex mais robusta que podemos criar para este padrão.
-  // O modificador 'm' (multiline) é crucial.
-  const valoresMatch = texto.match(/^.*Emol\..*R\$.*$/im);
+  // Passo 1: Encontrar a primeira linha de valores (com "Emol:")
+  const linha1Match = texto.match(/^.*Emol[:\s].*R\$.*$/im);
   
-  if (valoresMatch && valoresMatch[0]) {
-    valores = valoresMatch[0]
-      .replace(/^[^A-Za-z0-9]+/, '') // Remove qualquer lixo no início da linha (como '|- ' ou '-').
-      .replace(/\s+[A-Za-z]{2,}\s*$/, '') // Remove lixo de texto no final (ex: "EE MESA").
-      .replace(/-1SS/i, '- ISS') // Corrige o erro de OCR comum "1SS" para "ISS".
-      .replace(/\s\s+/g, ' ') // Normaliza espaços.
+  // Passo 2: Encontrar a segunda linha de valores (com "Total:")
+  const linha2Match = texto.match(/^.*Total[:\s].*R\$.*$/im);
+
+  let linha1Limpa = '';
+  let linha2Limpa = '';
+
+  if (linha1Match) {
+    linha1Limpa = linha1Match[0]
+      .replace(/.*(Emol[:\s].*)/i, '$1') // Pega tudo a partir de "Emol"
+      .replace(/- - fETEFGSTAS/i, '')    // Remove lixo específico
       .trim();
   }
+
+  if (linha2Match) {
+    linha2Limpa = linha2Match[0]
+      .replace(/fsTetatras/i, '') // Remove lixo específico
+      .trim();
+  }
+  
+  // Passo 3: Juntar as linhas limpas
+  if (linha1Limpa && linha2Limpa) {
+    valores = `${linha1Limpa} - ${linha2Limpa}`;
+  } else if (linha1Limpa) {
+    valores = linha1Limpa; // Fallback se apenas a primeira linha for encontrada
+  } else if (linha2Limpa) {
+    valores = linha2Limpa; // Fallback se apenas a segunda linha for encontrada
+  }
+
+  // Passo 4: Limpeza final da string combinada
+  valores = valores
+    .replace(/- 188:/i, '- ISS:') // Corrige o erro de OCR "188"
+    .replace(/\s\s+/g, ' ')       // Normaliza espaços
+    .trim();
+
 
   // ================= RESULTADO FINAL =================
   const resultado = {
@@ -497,10 +520,11 @@ function extrairDadosSeloMelhorado(texto) {
     textoCompleto: texto
   };
 
-  console.log('[OCR] Resultado da extração (v5 - Definitiva):', resultado);
+  console.log('[OCR] Resultado da extração (v6 - Final):', resultado);
   
   return resultado;
 }
+
 
 
 
