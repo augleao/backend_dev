@@ -1880,6 +1880,29 @@ app.put('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req,
   }
 });
 
+// ========== EDITAR USUARIOS ==========
+
+app.put('/api/admin/usuarios/:id/status', authenticate, requireRegistrador, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // 'ativo' ou 'inativo'
+  if (!['ativo', 'inativo'].includes(status)) {
+    return res.status(400).json({ message: 'Status inválido.' });
+  }
+  try {
+    const result = await pool.query(
+      'UPDATE public.users SET status = $1 WHERE id = $2 RETURNING *',
+      [status, id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+    res.json({ message: 'Status atualizado com sucesso.', usuario: result.rows[0] });
+  } catch (err) {
+    console.error('Erro ao atualizar status do usuário:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
+
 // ========== EXCLUIR USUARIOS ==========
 
 app.delete('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
