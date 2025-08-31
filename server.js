@@ -322,10 +322,11 @@ function extrairDadosSeloMelhorado(texto) {
 
   // === ATOS PRATICADOS POR ===
   const atosPorPatterns = [
-    /Praticado\(s\)\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /Atos\s+praticados\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /praticado\s+por[:\s]*([^\n\r]+?)(?:\n|\r|$)/i,
-    /Por[:\s]*([A-Z][^\n\r]+?)(?:\n|\r|$)/i
+  /por:\s*([^\n\r\-]*)/i,
+  /Praticado\(s\)\s+por[:\s]*([^\n\r\-]*)/i,
+  /Atos\s+praticados\s+por[:\s]*([^\n\r\-]*)/i,
+  /praticado\s+por[:\s]*([^\n\r\-]*)/i,
+  /Por[:\s]*([A-Z][^\n\r\-]*)/i
   ];
 
   let atosPraticadosPor = '';
