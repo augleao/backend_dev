@@ -3281,7 +3281,8 @@ app.post('/api/entrega-servico', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Rota GET para buscar entrega_servico por id
+
+// Rota GET para buscar entrega_servico por protocolo
 app.get('/api/entrega-servico/:protocolo', authenticateAdmin, async (req, res) => {
   const { protocolo } = req.params;
   try {
