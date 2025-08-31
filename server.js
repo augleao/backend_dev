@@ -441,55 +441,56 @@ async function extrairDadosSeloPorOCR(imagePath) {
 }*/
 
 function extrairDadosSeloMelhorado(texto) {
-  // Pré-processamento: remove quebras de linha e espaços duplos para facilitar a análise com regex.
-  const textoLimpo = texto.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ');
+  // Não vamos mais pré-processar o texto para manter as quebras de linha,
+  // o que é crucial para separar campos como "atos" e "valores".
 
   // ================= SELO DE CONSULTA =================
-  const seloMatch = textoLimpo.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
+  const seloMatch = texto.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
   const seloConsulta = seloMatch ? seloMatch[1] : '';
 
   // ================= CÓDIGO DE SEGURANÇA =================
-  const codigoMatch = textoLimpo.match(/(\d{4}\.\d{4}\.\d{4}\.\d{4})/);
+  const codigoMatch = texto.match(/(\d{4}\.\d{4}\.\d{4}\.\d{4})/);
   const codigoSeguranca = codigoMatch ? codigoMatch[1] : '';
 
-  // ================= QUANTIDADE DE ATOS (LÓGICA MELHORADA) =================
+  // ================= QUANTIDADE DE ATOS =================
   let qtdAtosFinal = null;
-  const qtdBaseMatch = textoLimpo.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
+  const qtdBaseMatch = texto.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
   if (qtdBaseMatch) {
     const qtdBase = qtdBaseMatch[1];
-    // Procura pelos códigos dos atos na linha, que podem estar em vários formatos.
-    // Ex: "1(7802), 117901)"
-    const atosCodigosMatch = textoLimpo.match(new RegExp(qtdBase + "\\s*\\(.*?\\)"));
-    if (atosCodigosMatch) {
-      // Captura a quantidade junto com os códigos. Ex: "2 (7802), 1(7901)"
-      // Limpa possíveis lixos no final, como a palavra "pets" do log.
-      qtdAtosFinal = atosCodigosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
+    // Procura por códigos na linha seguinte, como "1(7802), 117901)" ou "117101)"
+    const linhaAtosMatch = texto.match(new RegExp(qtdBase + "[^\\n]*\\)"));
+    if (linhaAtosMatch) {
+        // Tenta corrigir o padrão "117101)" para "1(7101)"
+        const correcaoMatch = linhaAtosMatch[0].match(new RegExp(`^${qtdBase}(\\d{4})\\)`));
+        if (correcaoMatch) {
+            qtdAtosFinal = `${qtdBase}(${correcaoMatch[1]})`;
+        } else {
+            // Se já estiver no formato "1(7101)" ou similar, usa diretamente
+            qtdAtosFinal = linhaAtosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
+        }
     } else {
-      qtdAtosFinal = qtdBase; // Se não encontrar códigos, usa a quantidade base.
+      qtdAtosFinal = qtdBase;
     }
   }
 
-  // ================= ATOS PRATICADOS POR (LÓGICA MAIS PRECISA) =================
+  // ================= ATOS PRATICADOS POR =================
   let atosPraticadosPor = '';
-  // Captura o nome que vem depois de "por:" e para ANTES do cargo "Escrevente".
-  // Isso evita capturar o cargo e o lixo de OCR.
-  const atosPorMatch = textoLimpo.match(/por[:\s]*(.*?)\s*-\s*Escrevente/i);
+  // Captura o nome que vem depois de "por:" e para no final da linha (antes do \n)
+  // ou antes do hífen do cargo.
+  const atosPorMatch = texto.match(/por[:\s]*(.*?)(?:\s*-|\n|\r)/i);
   if (atosPorMatch && atosPorMatch[1]) {
     atosPraticadosPor = atosPorMatch[1].trim();
   }
 
-  // ================= VALORES (LÓGICA MAIS FLEXÍVEL) =================
+  // ================= VALORES (LÓGICA CORRIGIDA E FINAL) =================
   let valores = '';
-  // Procura por uma linha que contenha "Emol.", "Total" e "R$".
-  // O ".*?" torna a busca flexível para o que estiver no meio.
-  // O `\-?` no início permite que a linha comece com um hífen opcional.
-  const valoresMatch = textoLimpo.match(/\-?\s*Emol\..*?Total\..*?R\$/i);
+  // A regex agora procura por uma linha que PODE começar com "|- " e DEVE conter "Emol." e "Total".
+  // O modificador 'm' (multiline) é essencial para que '^' corresponda ao início de uma LINHA, não do texto todo.
+  const valoresMatch = texto.match(/^.*Emol\..*Total\..*$/im);
   if (valoresMatch && valoresMatch[0]) {
-    // Limpa a string de lixo conhecido e formata.
     valores = valoresMatch[0]
-      .replace(/\|-\s*/, '') // Remove prefixo
-      .replace(/\s*-\s*ISS/i, ' - ISS') // Garante espaçamento antes de ISS
-      .replace(/\s+[A-Z]{2,}\s*$/i, '') // Remove lixo como "EE MESA" no final
+      .replace(/^\|-\s*/, '') // Remove o prefixo "|- " se existir no início da linha
+      .replace(/\s+[A-Za-z]+$/, '') // Remove lixo de texto no final da linha (ex: MAcugttiia)
       .replace(/\s\s+/g, ' ') // Normaliza espaços
       .trim();
   }
@@ -501,13 +502,14 @@ function extrairDadosSeloMelhorado(texto) {
     qtdAtos: qtdAtosFinal,
     atosPraticadosPor,
     valores,
-    textoCompleto: texto // Retorna o texto original completo para referência
+    textoCompleto: texto
   };
 
-  console.log('[OCR] Resultado da extração (v3 - Robusta):', resultado);
+  console.log('[OCR] Resultado da extração (v4 - Final):', resultado);
   
   return resultado;
 }
+
 
 
 
