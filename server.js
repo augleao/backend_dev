@@ -3567,6 +3567,31 @@ app.get('/api/selos-execucao-servico/:protocolo', async (req, res) => {
   res.json({ selos: result.rows });
 });
 
+// Atualiza um selo específico
+app.put('/api/selos-execucao-servico/:id', async (req, res) => {
+  const { id } = req.params;
+  const { selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE selos_execucao_servico
+       SET selo_consulta = $1,
+           codigo_seguranca = $2,
+           qtd_atos = $3,
+           atos_praticados_por = $4,
+           valores = $5
+       WHERE id = $6
+       RETURNING *`,
+      [selo_consulta, codigo_seguranca, qtd_atos, atos_praticados_por, valores, id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Selo não encontrado' });
+    }
+    res.json({ selo: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar selo' });
+  }
+});
+
 app.post('/api/execucaoservico/:execucaoId/selo', authenticateAdmin, upload.single('imagem'), async (req, res) => {
   const { execucaoId } = req.params;
   if (!execucaoId || execucaoId === 'undefined' || execucaoId === '') {
