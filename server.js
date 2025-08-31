@@ -441,89 +441,58 @@ async function extrairDadosSeloPorOCR(imagePath) {
 }*/
 
 function extrairDadosSeloMelhorado(texto) {
-  // Normalizar o texto: remover múltiplos espaços e alguns caracteres indesejados
-  const textoNormalizado = texto.replace(/\s+/g, ' ').trim();
+  // Pré-processamento: remove quebras de linha e espaços duplos para facilitar a análise com regex.
+  const textoLimpo = texto.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ');
 
   // ================= SELO DE CONSULTA =================
-  let seloConsulta = '';
-  const seloMatch = textoNormalizado.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
-  if (seloMatch && seloMatch[1]) {
-    seloConsulta = seloMatch[1];
-  }
+  const seloMatch = textoLimpo.match(/SELO\s+DE\s+CONSULTA[:\s]*([A-Z0-9]+)/i);
+  const seloConsulta = seloMatch ? seloMatch[1] : '';
 
   // ================= CÓDIGO DE SEGURANÇA =================
-  let codigoSeguranca = '';
-  // Padrão mais robusto para o formato com pontos
-  const codigoMatch = texto.match(/(\d{4}\.\d{4}\.\d{4}\.\d{4})/);
-  if (codigoMatch && codigoMatch[1]) {
-    codigoSeguranca = codigoMatch[1];
-  }
+  const codigoMatch = textoLimpo.match(/(\d{4}\.\d{4}\.\d{4}\.\d{4})/);
+  const codigoSeguranca = codigoMatch ? codigoMatch[1] : '';
 
-  // ================= QUANTIDADE DE ATOS =================
-  let qtdAtos = null;
-  let qtdAtosCompleto = '';
-
-  // Tenta encontrar a quantidade base (ex: "1")
-  const qtdBaseMatch = texto.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
-  if (qtdBaseMatch && qtdBaseMatch[1]) {
-    qtdAtos = parseInt(qtdBaseMatch[1], 10);
-  }
-
-  if (qtdAtos !== null) {
-    // Padrão para corrigir erro de OCR como "117101)" para "1(7101)"
-    const erroOcrPattern = new RegExp(`\\b${qtdAtos}(\\d{4})\\)`);
-    const erroMatch = texto.match(erroOcrPattern);
-    if (erroMatch && erroMatch[1]) {
-      qtdAtosCompleto = `${qtdAtos}(${erroMatch[1]})`;
+  // ================= QUANTIDADE DE ATOS (LÓGICA MELHORADA) =================
+  let qtdAtosFinal = null;
+  const qtdBaseMatch = textoLimpo.match(/Quantidade\s+de\s+atos\s+praticados[:\s]*(\d+)/i);
+  if (qtdBaseMatch) {
+    const qtdBase = qtdBaseMatch[1];
+    // Procura pelos códigos dos atos na linha, que podem estar em vários formatos.
+    // Ex: "1(7802), 117901)"
+    const atosCodigosMatch = textoLimpo.match(new RegExp(qtdBase + "\\s*\\(.*?\\)"));
+    if (atosCodigosMatch) {
+      // Captura a quantidade junto com os códigos. Ex: "2 (7802), 1(7901)"
+      // Limpa possíveis lixos no final, como a palavra "pets" do log.
+      qtdAtosFinal = atosCodigosMatch[0].replace(/\s+[a-z]+$/i, '').trim();
     } else {
-      // Se não houver erro, procura o padrão correto como "1(7101)"
-      const corretoMatch = texto.match(new RegExp(`${qtdAtos}\\s*\\((\\d{4,})\\)`));
-      if (corretoMatch) {
-        qtdAtosCompleto = corretoMatch[0];
-      }
+      qtdAtosFinal = qtdBase; // Se não encontrar códigos, usa a quantidade base.
     }
   }
-  
-  // Fallback se a lógica acima falhar
-  if (!qtdAtosCompleto && qtdAtos) {
-    qtdAtosCompleto = qtdAtos.toString();
-  }
-  
-  const qtdAtosFinal = qtdAtosCompleto || (qtdAtos ? qtdAtos.toString() : null);
 
-
-  // ================= ATOS PRATICADOS POR (LÓGICA CORRIGIDA) =================
+  // ================= ATOS PRATICADOS POR (LÓGICA MAIS PRECISA) =================
   let atosPraticadosPor = '';
-  // Regex ajustada para capturar o nome e o cargo, parando antes do lixo do OCR
-  const atosPorMatch = texto.match(/Ato\(s\)\s*Praticado\(s\)\s*por[:\s]*(.+?)\s*-\s*([A-Za-z\sÀ-ÿ-]+)/i);
-  
-  if (atosPorMatch && atosPorMatch[1] && atosPorMatch[2]) {
-    // Concatena o nome e o cargo, que foram capturados em grupos separados
-    let nomeCompleto = `${atosPorMatch[1].trim()} - ${atosPorMatch[2].trim()}`;
-    
-    // Limpeza final para remover qualquer "lixo" remanescente no final da string
-    // Remove palavras estranhas ou caracteres aleatórios no final.
-    nomeCompleto = nomeCompleto.replace(/\s+[A-Z]{2,}[a-z]+[A-Z]+[a-z]*[A-Z]*[a-z]*\s*$/g, '').trim();
-    
-    atosPraticadosPor = nomeCompleto;
+  // Captura o nome que vem depois de "por:" e para ANTES do cargo "Escrevente".
+  // Isso evita capturar o cargo e o lixo de OCR.
+  const atosPorMatch = textoLimpo.match(/por[:\s]*(.*?)\s*-\s*Escrevente/i);
+  if (atosPorMatch && atosPorMatch[1]) {
+    atosPraticadosPor = atosPorMatch[1].trim();
   }
 
-
-  // ================= VALORES =================
-  const valoresEncontrados = [];
-  // Expressão regular para encontrar todas as linhas de valores de uma vez
-  const valoresMatch = texto.match(/Emol\..*?Total\..*?ISS\..*/i);
-  
+  // ================= VALORES (LÓGICA MAIS FLEXÍVEL) =================
   let valores = '';
-  if (valoresMatch) {
-    // Limpa a string de valores, removendo lixo e normalizando
+  // Procura por uma linha que contenha "Emol.", "Total" e "R$".
+  // O ".*?" torna a busca flexível para o que estiver no meio.
+  // O `\-?` no início permite que a linha comece com um hífen opcional.
+  const valoresMatch = textoLimpo.match(/\-?\s*Emol\..*?Total\..*?R\$/i);
+  if (valoresMatch && valoresMatch[0]) {
+    // Limpa a string de lixo conhecido e formata.
     valores = valoresMatch[0]
-      .replace(/\|-\s*/, '') // Remove "|- " do início
-      .replace(/\s\s+/g, ' ') // Remove espaços extras
-      .replace(/MAcugttiia|fopetatas/gi, '') // Remove lixo conhecido
+      .replace(/\|-\s*/, '') // Remove prefixo
+      .replace(/\s*-\s*ISS/i, ' - ISS') // Garante espaçamento antes de ISS
+      .replace(/\s+[A-Z]{2,}\s*$/i, '') // Remove lixo como "EE MESA" no final
+      .replace(/\s\s+/g, ' ') // Normaliza espaços
       .trim();
   }
-
 
   // ================= RESULTADO FINAL =================
   const resultado = {
@@ -532,13 +501,14 @@ function extrairDadosSeloMelhorado(texto) {
     qtdAtos: qtdAtosFinal,
     atosPraticadosPor,
     valores,
-    textoCompleto: texto
+    textoCompleto: texto // Retorna o texto original completo para referência
   };
 
-  console.log('[OCR] Resultado da extração (versão corrigida):', resultado);
+  console.log('[OCR] Resultado da extração (v3 - Robusta):', resultado);
   
   return resultado;
 }
+
 
 
 // Executar criação da tabela
