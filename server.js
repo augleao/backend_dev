@@ -1854,7 +1854,7 @@ app.get('/api/test', (req, res) => {
 app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, serventia, cargo FROM public.users ORDER BY nome'
+      'SELECT id, nome, email, serventia, cargo, status FROM public.users ORDER BY nome'
     );
     res.json({ usuarios: result.rows });
   } catch (err) {
@@ -1863,65 +1863,68 @@ app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res
   }
 });
 
+
 // ========== EDITAR USUARIOS ==========
 
 app.put('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
   const { id } = req.params;
-  const { nome, serventia, cargo } = req.body;
+  const { email, password, serventia, cargo, nome, status } = req.body;
+
+  // Monta dinamicamente os campos a serem atualizados
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (email !== undefined) {
+    fields.push(`email = $${idx++}`);
+    values.push(email);
+  }
+  if (password !== undefined && password !== '') {
+    fields.push(`password = crypt($${idx++}, gen_salt('bf'))`);
+    values.push(password);
+  }
+  if (serventia !== undefined) {
+    fields.push(`serventia = $${idx++}`);
+    values.push(serventia);
+  }
+  if (cargo !== undefined) {
+    fields.push(`cargo = $${idx++}`);
+    values.push(cargo);
+  }
+  if (nome !== undefined) {
+    fields.push(`nome = $${idx++}`);
+    values.push(nome);
+  }
+  if (status !== undefined) {
+    if (!['ativo', 'inativo'].includes(status)) {
+      return res.status(400).json({ message: 'Status inválido.' });
+    }
+    fields.push(`status = $${idx++}`);
+    values.push(status);
+  }
+
+  if (fields.length === 0) {
+    return res.status(400).json({ message: 'Nenhum campo para atualizar.' });
+  }
+
+  values.push(id);
+
   try {
-    await pool.query(
-      'UPDATE public.users SET nome = $1, serventia = $2, cargo = $3 WHERE id = $4',
-      [nome, serventia, cargo, id]
+    const result = await pool.query(
+      `UPDATE public.users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
     );
-    res.json({ message: 'Usuário atualizado com sucesso.' });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+    res.json({ message: 'Usuário atualizado com sucesso.', usuario: result.rows[0] });
   } catch (err) {
     console.error('Erro ao atualizar usuário:', err);
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
 
-// ========== EDITAR USUARIOS ==========
 
-app.put('/api/admin/usuarios/:id/status', authenticate, requireRegistrador, async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body; // 'ativo' ou 'inativo'
-  if (!['ativo', 'inativo'].includes(status)) {
-    return res.status(400).json({ message: 'Status inválido.' });
-  }
-  try {
-    const result = await pool.query(
-      'UPDATE public.users SET status = $1 WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Usuário não encontrado.' });
-    }
-    res.json({ message: 'Status atualizado com sucesso.', usuario: result.rows[0] });
-  } catch (err) {
-    console.error('Erro ao atualizar status do usuário:', err);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
-  }
-});
-
-// ========== EXCLUIR USUARIOS ==========
-
-app.delete('/api/admin/usuarios/:id', authenticate, requireRegistrador, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('DELETE FROM public.users WHERE id = $1', [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Usuário não encontrado.' });
-    }
-    res.json({ message: 'Usuário excluído com sucesso.' });
-  } catch (err) {
-    console.error('Erro ao excluir usuário:', err);
-    // Verifica erro de integridade referencial (Postgres)
-    if (err.code === '23503') {
-      return res.status(400).json({ message: 'Não é possível excluir: usuário vinculado a outros registros.' });
-    }
-    res.status(500).json({ message: 'Erro interno do servidor.' });
-  }
-});
 
 // ========== INICIALIZAÇÃO DO SERVIDOR ==========
 
