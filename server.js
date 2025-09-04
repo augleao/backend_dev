@@ -1960,12 +1960,12 @@ app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res
 // Nova rota: lista usuários da mesma serventia do usuário autenticado
 app.get('/api/usuarios/mesma-serventia', authenticate, async (req, res) => {
   try {
-    const { serventia, nome, id } = req.user;
-    console.log(`[API] Listando usuários da serventia: ${serventia} | Usuário: ${nome} (ID: ${id})`);
+    // Prioriza a query string, mas pode cair no token se quiser manter compatibilidade
+    const serventia = req.query.serventia || req.user.serventia;
     if (!serventia) {
-      return res.status(400).json({ message: 'Serventia não encontrada para o usuário.' });
+      return res.status(400).json({ message: 'Serventia não informada.' });
     }
-
+    console.log(`[API] Listando usuários da serventia: ${serventia} | Usuário: ${req.user.nome} (ID: ${req.user.id})`);
     const result = await pool.query(
       'SELECT id, nome, email, serventia, cargo, status FROM public.users WHERE serventia = $1 ORDER BY nome',
       [serventia]
