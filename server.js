@@ -1945,7 +1945,6 @@ app.get('/api/test', (req, res) => {
 });
 
 // ========== LISTAR TODOS USUARIOS ==========
-
 app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1958,6 +1957,25 @@ app.get('/api/admin/usuarios', authenticate, requireRegistrador, async (req, res
   }
 });
 
+// Nova rota: lista usuários da mesma serventia do usuário autenticado
+app.get('/api/usuarios/mesma-serventia', authenticate, async (req, res) => {
+  try {
+    const { serventia, nome, id } = req.user;
+    console.log(`[API] Listando usuários da serventia: ${serventia} | Usuário: ${nome} (ID: ${id})`);
+    if (!serventia) {
+      return res.status(400).json({ message: 'Serventia não encontrada para o usuário.' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, nome, email, serventia, cargo, status FROM public.users WHERE serventia = $1 ORDER BY nome',
+      [serventia]
+    );
+    res.json({ usuarios: result.rows });
+  } catch (err) {
+    console.error('Erro ao listar usuários da mesma serventia:', err);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+});
 
 // ========== EDITAR USUARIOS ==========
 
